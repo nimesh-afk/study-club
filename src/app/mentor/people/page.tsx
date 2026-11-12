@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { SignedInShell } from "@/components/signed-in-shell";
@@ -38,7 +39,10 @@ export default async function PeoplePage() {
 
   return (
     <SignedInShell profile={profile}>
-      <h1 className="text-2xl font-semibold">People</h1>
+      <Link href="/mentor" className="text-sm text-zinc-600 hover:text-zinc-900">
+        ← Back to mentor area
+      </Link>
+      <h1 className="mt-2 text-2xl font-semibold">People</h1>
 
       <section className="mt-6">
         <h2 className="text-lg font-semibold">Add a person</h2>
