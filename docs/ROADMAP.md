@@ -20,8 +20,8 @@ One student can learn **Year 8 Mathematics** end to end (start with one or two t
 
 ### M2: Curriculum → objective map (B)
 - ☑ `src/lib/ai/` wrapper (budget check, per-student daily cap, usage log, safety prompt) + `ai_usage` migration + admin AI check page — pulled forward from M6
-- ☐ Anthropic API key (Console, monthly spend limit) in `.env.local` and Vercel; AI check page passes
-- ☐ Migration: `subjects`, `source_documents`, `chunks`, `objectives`, `objective_prereqs` + RLS
+- ☑ Anthropic API key (Console, monthly spend limit) in `.env.local` and Vercel; AI check page passes
+- ☑ Migration: `subjects` (seeded with MATH8), `source_documents`, `chunks`, `chunk_objectives`, `objectives`, `objective_prereqs` + RLS
 - ☐ Mentor upload of source PDFs (curriculum Level 8 Maths, textbook) to a private bucket; text extraction; chunk by section
 - ☐ AI proposes objectives (one per curriculum content description, split finer where needed) + prerequisites → saved as `draft`
 - ☐ Tag textbook chunks to objectives

@@ -102,10 +102,11 @@ docs/
 - `profiles` — id (= auth user id), role (`student` | `mentor` | `parent` | `admin`), display_name, year_level
 - `student_links` — student_id, linked_user_id, relationship (`mentor` | `parent`)
 - `invites` — email, role, invited_by, consent_recorded_at (parent/guardian consent for students)
-- `subjects` — code (e.g. `CHEM34`), name, current_study_design_version
-- `source_documents` — subject_id, type (`study_design` | `examiner_report` | `past_exam` | `notes`), year, study_design_version, storage_path, status
-- `chunks` — document_id, text, source_rank, study_design_version, is_current, objective_ids
-- `objectives` — subject_id, unit, area_of_study, code, statement, dot_point_text, status (`draft` | `approved` | `retired`), approved_by
+- `subjects` — code (e.g. `MATH8`), name, current_study_design_version
+- `source_documents` — subject_id, type (`syllabus` | `textbook` | `examiner_report` | `past_exam` | `notes`), title, year, study_design_version, storage_path, status (`uploaded` | `extracted` | `failed`), uploaded_by. **Mentors only.**
+- `chunks` — document_id, seq, heading, page_start/page_end, text, source_rank, study_design_version, is_current. **Mentors only**; students get chunks only through server-side retrieval for one objective (5.3, 5.5).
+- `chunk_objectives` — chunk_id, objective_id (the objective tags used for retrieval)
+- `objectives` — subject_id, unit, area_of_study (Year 8: strand), code, statement, dot_point_text, sort_order, status (`draft` | `approved` | `retired`), approved_by, approved_at. Students/parents see approved only; approved objectives are retired, never deleted.
 - `objective_prereqs` — objective_id, prereq_id
 - `content_items` — objective_id, kind (`explanation` | `retrieval_q` | `worked_example` | `exam_q`), body (jsonb), source_chunk_ids, status (`draft` | `approved`)
 - `attempts` — student_id, objective_id, content_item_id, activity, response, score, ai_feedback, created_at
@@ -247,6 +248,7 @@ npm test           # once tests are set up
 - Login: 6-digit email code (no magic links). Emails sent via Resend from `studyclub@mail.piyatissa.com` (Supabase custom SMTP). Code verified with `verifyOtp({ type: "email" })`.
 - No `invites` table: an admin creates people directly (People page); guardian consent is stored on the student's profile (`guardian_consent_at`, required by a CHECK constraint).
 - Light theme only for V1.
+- Source documents and chunks are readable by mentors/admins only. The tutor fetches one objective's chunks in server code (secret key), so students can never page through the textbook.
 
 ---
 
@@ -258,8 +260,8 @@ Preview links look like `https://study-club-git-<branch>-mithuru.vercel.app` (Ve
 **Email:** Resend, domain `mail.piyatissa.com` (verified, Tokyo region, tracking off). The root domain piyatissa.com uses Google Workspace: never touch its DNS records.
 **Admin:** Nimesh (`nimesh@piyatissa.com`), role `admin`.
 
-**Done:** M0, M1, and the M2 AI wrapper (`src/lib/ai/`, admin page `/mentor/ai-check`). Migrations applied: `20261112100000_profiles_and_links`, `20261112230000_ai_usage`.
-**Next:** M2: add the Anthropic API key (Console, with a monthly spend limit) to `.env.local` and Vercel as `ANTHROPIC_API_KEY`, check `/mentor/ai-check`; then the `subjects` / `source_documents` / `chunks` / `objectives` migration.
+**Done:** M0, M1, the M2 AI wrapper, and the M2 curriculum/objectives tables (`src/lib/ai/`, admin page `/mentor/ai-check`). Migrations applied: `20261112100000_profiles_and_links`, `20261112230000_ai_usage`, `20261113090000_curriculum_and_objectives`.
+**Next:** M2: mentor upload of the Level 8 curriculum and textbook PDFs to a private Storage bucket, text extraction, chunk by section.
 
 **How work gets done right now**
 - Nimesh is new to GitHub. Explain steps plainly; one step at a time.
