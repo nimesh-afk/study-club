@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { SignedInShell } from "@/components/signed-in-shell";
 
@@ -9,6 +10,14 @@ export default async function MentorHome() {
       <p className="mt-2 text-zinc-600">
         Uploads, objective maps and student progress will appear here.
       </p>
+      {profile.role === "admin" && (
+        <Link
+          href="/mentor/people"
+          className="mt-6 inline-block rounded-lg border border-zinc-300 px-4 py-2 font-medium"
+        >
+          Manage people →
+        </Link>
+      )}
     </SignedInShell>
   );
 }

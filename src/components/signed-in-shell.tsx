@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import type { Profile } from "@/lib/auth";
 import { signOut } from "@/lib/auth-actions";
@@ -20,7 +21,17 @@ export function SignedInShell({
   return (
     <div className="flex flex-1 flex-col">
       <header className="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
-        <span className="font-semibold">Study Club</span>
+        <nav className="flex items-center gap-4">
+          {/* "/" sends each person to their own home page. */}
+          <Link href="/" className="font-semibold">
+            Study Club
+          </Link>
+          {profile.role === "admin" && (
+            <Link href="/mentor/people" className="text-sm text-zinc-600 hover:text-zinc-900">
+              People
+            </Link>
+          )}
+        </nav>
         <div className="flex items-center gap-3 text-sm">
           <span className="text-zinc-600">
             {profile.display_name} · {roleLabel[profile.role]}
