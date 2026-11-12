@@ -155,6 +155,12 @@ Students are minors. These rules are not optional, and they apply to every featu
 
 ### 6.2 Row-level security (RLS)
 - **Every table has RLS enabled, with policies written in the same migration that creates the table.** A PR that adds a table without RLS policies must not be merged.
+- **Explicit GRANTs are required.** Our Supabase project has "automatically expose new tables" turned **OFF**, so a new table is not reachable through the API until it is granted. Every migration that creates a table must, in the same file:
+  1. `alter table ... enable row level security;`
+  2. create the policies;
+  3. `grant` only the privileges needed (e.g. `select, insert, update, delete`) to the `authenticated` role.
+  - Grant to `anon` **only** if logged-out users truly need it (almost never in this app), and say why in a comment in the migration.
+  - GRANTs decide *whether* a role can touch the table at all; RLS policies decide *which rows*. We need both.
 - Students: read/write their own attempts and mastery; read approved objectives/content.
 - Mentors: read their linked students' data; create/approve objectives and content.
 - Parents: read their linked students' **progress summaries** (mastery, activity, time). By default they do not see full free-text responses. *(Decision to confirm with the family.)*
