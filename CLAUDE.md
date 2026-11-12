@@ -193,6 +193,12 @@ Students are minors. These rules are not optional, and they apply to every featu
 - Before opening a PR, run: `npm run lint`, `npm run build` and the tests. All must pass.
 - Each PR description says: what changed, how to test it on the Vercel preview link, and any new env vars or migrations.
 - Schema changes: only via new files in `supabase/migrations/`. Never edit an old migration that's already merged.
+- How a migration is applied (Supabase CLI, run on the Mac from the project folder):
+  1. Write the file as `supabase/migrations/<YYYYMMDDHHMMSS>_<name>.sql` (tables + RLS + policies + grants together).
+  2. In the PR description, say the migration must be applied.
+  3. After the PR is approved and **before merging**, apply it: `npx supabase db push`.
+  4. Then merge. (One database serves previews and production for now, so code that needs a new table only works once it's pushed.)
+  - Check what's applied: `npx supabase migration list`.
 - **Never commit:** `.env*` files with values, API keys, student data, or VCAA documents.
 - Ask before adding a new npm dependency, and explain why it's needed.
 - Prefer simple, readable code over clever code. Two beginners maintain this.
