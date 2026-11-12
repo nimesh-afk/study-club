@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
@@ -71,9 +72,16 @@ export async function loginAction(
   // intent === "send"
   // shouldCreateUser: false -> this can never create an account.
   // Accounts are created only by an admin (invite-only, CLAUDE.md 1).
+  // The email's sign-in link returns to /auth/callback on the site the person
+  // is using (live site, a preview link, or localhost). Supabase only accepts
+  // addresses on its allow-list (Authentication > URL Configuration).
+  const origin = (await headers()).get("origin") ?? "";
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: { shouldCreateUser: false },
+    options: {
+      shouldCreateUser: false,
+      emailRedirectTo: origin ? `${origin}/auth/callback` : undefined,
+    },
   });
 
   // Don't reveal whether an email has an account: only rate limits get
@@ -91,7 +99,7 @@ export async function loginAction(
     step: "code",
     email,
     message:
-      "If this email belongs to a Study Club member, a code is on its way. It can take a minute.",
+      "If this email belongs to a Study Club member, an email is on its way. Open its sign-in link on this device, in this browser. If the email shows a code instead, type it below.",
     isError: false,
   };
 }

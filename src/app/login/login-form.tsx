@@ -46,17 +46,17 @@ export function LoginForm() {
             disabled={pending}
             className={primaryButton}
           >
-            {pending ? "Sending…" : "Email me a code"}
+            {pending ? "Sending…" : "Email me a sign-in link"}
           </button>
         </>
       ) : (
         <>
           <input type="hidden" name="email" value={state.email} />
           <p className="text-sm text-zinc-600">
-            Code sent to <span className="font-medium">{state.email}</span>
+            Email sent to <span className="font-medium">{state.email}</span>
           </p>
           <label htmlFor="code" className="text-sm font-medium">
-            Code
+            Code (only if your email shows one)
           </label>
           <input
             id="code"
@@ -67,7 +67,6 @@ export function LoginForm() {
             pattern="[0-9 ]*"
             maxLength={12}
             required
-            autoFocus
             className={`${inputClass} tracking-widest`}
           />
           <button
@@ -77,7 +76,7 @@ export function LoginForm() {
             disabled={pending}
             className={primaryButton}
           >
-            {pending ? "Checking…" : "Log in"}
+            {pending ? "Checking…" : "Log in with code"}
           </button>
           <div className="flex justify-between">
             <button
@@ -88,7 +87,7 @@ export function LoginForm() {
               disabled={pending}
               className={linkButton}
             >
-              Send a new code
+              Send again
             </button>
             <button
               type="submit"
