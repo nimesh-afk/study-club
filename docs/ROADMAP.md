@@ -7,16 +7,16 @@ Suggested split: **A = accounts, security and dashboards**; **B = content pipeli
 One student can learn **Chemistry 3&4, Unit 3** end to end: the mentor uploads the study design → approves objectives → approves content → the student goes through the loop → mastery updates → all three dashboards show it.
 
 ### M0: Foundations (both)
-- ☐ Blank Next.js app deployed to Vercel (`syd1`) with CLAUDE.md, ROADMAP.md, `.env.example`
-- ☐ Supabase project created in Sydney; env vars added locally and in Vercel
-- ☐ Supabase client helpers (`src/lib/supabase/`) + session proxy
+- ☑ Blank Next.js app deployed to Vercel (`syd1`) with CLAUDE.md, ROADMAP.md, `.env.example`
+- ☑ Supabase project created in Sydney; env vars added locally and in Vercel
+- ☑ Supabase client helpers (`src/lib/supabase/`) + session proxy
 
 ### M1: Accounts and roles (A)
-- ☐ Turn off public sign-ups; email login page (magic link / code); auth callback
-- ☐ Migration: `profiles`, `student_links`, `invites` + RLS
-- ☐ Mentor/admin "invite a person" screen (server action using the secret key) with parent consent checkbox for students
-- ☐ Role-based routing: student → /student, mentor → /mentor, parent → /parent
-- ☐ Custom email sender (SMTP, e.g. Resend), because Supabase's built-in email is rate-limited
+- ☑ Turn off public sign-ups; email login page (6-digit code); auth callback
+- ☑ Migration: `profiles`, `student_links` + RLS (consent stored on the student's profile)
+- ☑ Admin "add a person" screen (server action using the secret key) with parent consent checkbox for students
+- ☑ Role-based routing: student → /student, mentor → /mentor, parent → /parent
+- ☑ Custom email sender: Resend via mail.piyatissa.com (studyclub@mail.piyatissa.com)
 
 ### M2: Study design → objective map (B)
 - ☐ Migration: `subjects`, `source_documents`, `chunks`, `objectives`, `objective_prereqs` + RLS

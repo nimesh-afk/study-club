@@ -21,7 +21,7 @@ export default async function LoginPage({
       {link === "invalid" && (
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">
           That sign-in link has expired or was opened in a different browser.
-          Please ask for a new one below.
+          Please ask for a code below.
         </p>
       )}
       <LoginForm />
