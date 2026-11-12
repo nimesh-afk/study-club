@@ -26,7 +26,7 @@ One student can learn **Year 8 Mathematics** end to end (start with one or two t
 - ☑ Text extraction (no AI); chunk by textbook section (e.g. 6D), plus chapter openers (with curriculum codes), reviews, quizzes and answers
 - ☑ AI proposes objectives (one per curriculum content description, split finer where needed) + prerequisites → saved as `draft` (`/mentor/objectives`; built, waiting for the curriculum PDF to run for real)
 - ☐ Tag textbook chunks to objectives
-- ☐ Mentor review screen: edit, merge, split, approve, set prerequisites
+- ☑ Mentor review screen (kept simple: objectives are set once a year): edit wording/strand/prerequisites, delete drafts, approve one or all, retire
 
 ### M3: Content per objective (B)
 - ☐ Migration: `content_items` + RLS

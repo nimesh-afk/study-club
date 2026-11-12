@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { SignedInShell } from "@/components/signed-in-shell";
 import { STRANDS } from "@/lib/ai/prompts/propose-objectives";
 import { ProposeButton } from "./propose-button";
+import { ApproveAllButton } from "./approve-all-button";
 
 // The AI proposal can take a couple of minutes. 300 s is the Vercel Hobby maximum.
 export const maxDuration = 300;
@@ -72,6 +73,16 @@ export default async function ObjectivesPage() {
         </section>
       )}
 
+      {subject && drafts > 0 && (
+        <section className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4">
+          <p className="mb-3 text-sm">
+            Read through the drafts below and fix anything wrong (click one to edit it). When
+            they look right, approve them all at once. This is a once-a-year job.
+          </p>
+          <ApproveAllButton subjectId={subject.id} count={drafts} />
+        </section>
+      )}
+
       {STRANDS.map((strand) => {
         const inStrand = list.filter((o) => o.area_of_study === strand);
         if (inStrand.length === 0) return null;
@@ -80,17 +91,22 @@ export default async function ObjectivesPage() {
             <h2 className="mb-2 font-semibold">{strand}</h2>
             <ul className="divide-y divide-zinc-200 rounded-xl border border-zinc-200">
               {inStrand.map((o) => (
-                <li key={o.id} className="flex flex-col gap-1 px-4 py-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-sm text-zinc-600">{o.code}</span>
-                    <span className={`rounded px-2 py-0.5 text-xs font-medium ${statusStyle[o.status]}`}>
-                      {o.status}
-                    </span>
-                  </div>
-                  <span>{o.statement}</span>
-                  {prereqCodes(o.id) && (
-                    <span className="text-sm text-zinc-600">Needs first: {prereqCodes(o.id)}</span>
-                  )}
+                <li key={o.id}>
+                  <Link
+                    href={`/mentor/objectives/${o.id}`}
+                    className="flex flex-col gap-1 px-4 py-3 hover:bg-zinc-50"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-sm text-zinc-600">{o.code}</span>
+                      <span className={`rounded px-2 py-0.5 text-xs font-medium ${statusStyle[o.status]}`}>
+                        {o.status}
+                      </span>
+                    </div>
+                    <span>{o.statement}</span>
+                    {prereqCodes(o.id) && (
+                      <span className="text-sm text-zinc-600">Needs first: {prereqCodes(o.id)}</span>
+                    )}
+                  </Link>
                 </li>
               ))}
             </ul>
