@@ -24,7 +24,7 @@ One student can learn **Year 8 Mathematics** end to end (start with one or two t
 - ☑ Migration: `subjects` (seeded with MATH8), `source_documents`, `chunks`, `chunk_objectives`, `objectives`, `objective_prereqs` + RLS
 - ☑ Mentor upload of source PDFs (curriculum Level 8 Maths, textbook) to the private `sources` bucket (`/mentor/sources`)
 - ☑ Text extraction (no AI); chunk by textbook section (e.g. 6D), plus chapter openers (with curriculum codes), reviews, quizzes and answers
-- ☐ AI proposes objectives (one per curriculum content description, split finer where needed) + prerequisites → saved as `draft`
+- ☑ AI proposes objectives (one per curriculum content description, split finer where needed) + prerequisites → saved as `draft` (`/mentor/objectives`; built, waiting for the curriculum PDF to run for real)
 - ☐ Tag textbook chunks to objectives
 - ☐ Mentor review screen: edit, merge, split, approve, set prerequisites
 
