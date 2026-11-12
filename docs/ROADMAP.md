@@ -1,0 +1,60 @@
+# Roadmap
+
+Each line marked ☐ is meant to be one branch → one pull request. Owner A and B are the two builders.
+Suggested split: **A = accounts, security and dashboards**; **B = content pipeline and AI**.
+
+## V1 goal
+One student can learn **Chemistry 3&4, Unit 3** end to end: the mentor uploads the study design → approves objectives → approves content → the student goes through the loop → mastery updates → all three dashboards show it.
+
+### M0: Foundations (both)
+- ☐ Blank Next.js app deployed to Vercel (`syd1`) with CLAUDE.md, ROADMAP.md, `.env.example`
+- ☐ Supabase project created in Sydney; env vars added locally and in Vercel
+- ☐ Supabase client helpers (`src/lib/supabase/`) + session proxy
+
+### M1: Accounts and roles (A)
+- ☐ Turn off public sign-ups; email login page (magic link / code); auth callback
+- ☐ Migration: `profiles`, `student_links`, `invites` + RLS
+- ☐ Mentor/admin "invite a person" screen (server action using the secret key) with parent consent checkbox for students
+- ☐ Role-based routing: student → /student, mentor → /mentor, parent → /parent
+- ☐ Custom email sender (SMTP, e.g. Resend), because Supabase's built-in email is rate-limited
+
+### M2: Study design → objective map (B)
+- ☐ Migration: `subjects`, `source_documents`, `chunks`, `objectives`, `objective_prereqs` + RLS
+- ☐ Mentor upload of the study design PDF to a private bucket; text extraction
+- ☐ AI proposes objectives (one per key knowledge dot point) + prerequisites → saved as `draft`
+- ☐ Mentor review screen: edit, merge, split, approve, set prerequisites
+
+### M3: Content per objective (B)
+- ☐ Migration: `content_items` + RLS
+- ☐ Generate a draft explanation, 5 retrieval questions and 1 worked example per approved objective
+- ☐ Mentor content approval screen
+
+### M4: Student learning loop (A + B)
+- ☐ Migration: `attempts`, `mastery` + RLS
+- ☐ Mastery engine + decay + next-activity rules as pure functions **with unit tests** (A)
+- ☐ Diagnose (3 quick questions) → teach (explanation + worked example) → retrieval (B)
+- ☐ Explain-back: student writes in their own words; AI grades against a rubric, returns JSON score + feedback (B)
+- ☐ "Today" queue for the student, driven by the engine (A)
+
+### M5: Dashboards (A)
+- ☐ Student: objective map coloured by mastery, today's queue, streak
+- ☐ Mentor: grid of students × objectives, recent explain-backs, safety flags, draft queue
+- ☐ Parent: per-child summary (mastery by area, time spent, what's due)
+
+### M6: Guardrails before real use (both)
+- ☐ `src/lib/ai/client.ts` wrapper: safety system prompt, budget check, usage logging, per-student daily cap
+- ☐ Migration: `ai_usage`, `safety_flags` + RLS
+- ☐ AI disclosure on student screens; privacy page
+- ☐ Anthropic Console spend limit; Supabase backups checked
+- ☐ Test pass with three real accounts (student, parent, mentor) on phone, iPad and laptop
+
+**→ V1 release to one student.** Use it for 2 weeks, collect feedback, then continue.
+
+## V1.1 and later (rough order)
+1. Examiner reports + past exams: upload, chunk, tag to objectives, version filtering
+2. Exam-style transfer questions linked to objectives (mastery level 4)
+3. Tune decay intervals from real data
+4. Add Biology 3&4, then Chemistry 1&2 (same model)
+5. Installable on iPad/phone home screen (PWA), reminders
+6. Embeddings + pgvector search if tag retrieval isn't enough
+7. English 3&4 (needs its own design: skills, essay feedback, examiner criteria)
