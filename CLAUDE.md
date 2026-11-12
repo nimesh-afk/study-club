@@ -12,8 +12,8 @@ Next.js-specific coding guidance (kept up to date by Next.js) is in AGENTS.md:
 
 An adaptive learning app for a small, private family study club preparing for VCE.
 
-- **Subjects (in build order):** Chemistry Units 3&4 → Biology Units 3&4 → Chemistry Units 1&2 → English Units 3&4.
-- **Users:** students (Year 11–12, **all under 18**), mentors (adults who teach and approve content), parents (adults who watch progress).
+- **Subjects (in build order):** **Year 8 Mathematics** (Victorian Curriculum 2.0, Level 8) → Chemistry Units 3&4 → Biology Units 3&4 → Chemistry Units 1&2 → English Units 3&4.
+- **Users:** students (Year 8–12, about 13–18 years old, **all under 18**), mentors (adults who teach and approve content), parents (adults who watch progress).
 - **Devices:** iPad, laptop, phone. Every screen must work on a phone-width screen first.
 - **Access:** invite-only. Everyone logs in by email (magic link / one-time code). There is no public sign-up.
 
@@ -118,6 +118,16 @@ docs/
 ## 5. Content rules
 
 ### 5.1 Source hierarchy (highest wins when sources disagree)
+The "syllabus" is the document that defines the objectives. It depends on the subject.
+
+**Year 8 Mathematics (V1 subject)**
+1. Victorian Curriculum 2.0 Mathematics, Level 8 (content descriptions and elaborations): defines the objectives
+2. The class textbook (a PDF): explanations, worked examples, exercises
+3. Mentor notes
+
+There are no exams or examiner reports at Year 8. The textbook's chapter reviews and harder exercises serve as the "transfer" questions (mastery level 4).
+
+**VCE subjects (later)**
 1. VCE study design (current version)
 2. VCAA examiner reports
 3. VCAA past exams
@@ -138,7 +148,8 @@ docs/
 - When the AI grades or explains, it must stay within approved content and the retrieved chunks. If it can't answer from them, it says so and suggests asking a mentor. It doesn't make up chemistry or biology.
 
 ### 5.5 Copyright
-- VCAA study designs, exams and examiner reports are VCAA copyright. Keep them in **private** Supabase Storage for club members only.
+- The textbook PDF is the publisher's copyright, and VCAA documents are VCAA copyright. Keep them in **private** Supabase Storage for club members only. Never share them outside the club.
+- Never paste long passages of the textbook into prompts or show them to students wholesale: use the relevant chunk only (5.3).
 - **Never commit source documents to the git repo.** Never make them publicly reachable.
 
 ---
@@ -193,13 +204,14 @@ Students are minors. These rules are not optional, and they apply to every featu
 - Before opening a PR, run: `npm run lint`, `npm run build` and the tests. All must pass.
 - Each PR description says: what changed, how to test it on the Vercel preview link, and any new env vars or migrations.
 - Schema changes: only via new files in `supabase/migrations/`. Never edit an old migration that's already merged.
-- How a migration is applied (Supabase CLI, run on the Mac from the project folder):
+- How a migration is applied (current practice, CLI not linked yet):
   1. Write the file as `supabase/migrations/<YYYYMMDDHHMMSS>_<name>.sql` (tables + RLS + policies + grants together).
-  2. In the PR description, say the migration must be applied.
-  3. After the PR is approved and **before merging**, apply it: `npx supabase db push`.
-  4. Then merge. (One database serves previews and production for now, so code that needs a new table only works once it's pushed.)
-  - Check what's applied: `npx supabase migration list`.
-- **Never commit:** `.env*` files with values, API keys, student data, or VCAA documents.
+  2. Test it against a local Postgres with stub `auth` schema and roles, including RLS checks per role.
+  3. After the PR is approved and **before merging**, run it in the Supabase SQL Editor inside `begin; … commit;`, and in the same transaction record it:
+     `insert into supabase_migrations.schema_migrations (version, name) values ('<YYYYMMDDHHMMSS>', '<name>');`
+     (This keeps the history compatible with `npx supabase db push` if we link the CLI later.)
+  4. Then merge. (One database serves previews and production for now, so code that needs a new table only works once it's applied.)
+- **Never commit:** `.env*` files with values, API keys, student data, the textbook, or VCAA documents.
 - Ask before adding a new npm dependency, and explain why it's needed.
 - Prefer simple, readable code over clever code. Two beginners maintain this.
 - When unsure about a product decision, stop and ask rather than guess. Record the answer in section 9.
@@ -227,8 +239,31 @@ npm test           # once tests are set up
 - Hosting in Sydney regions (Vercel `syd1`, Supabase `ap-southeast-2`).
 - No local LLM / Mac mini.
 - Invite-only, email login.
-- V1 = Chemistry 3&4 only. Other subjects come after V1 works end to end.
+- **V1 = Year 8 Mathematics** (replaced Chemistry 3&4 as the first subject, Nov 2026). Source = Victorian Curriculum 2.0 Maths Level 8 + the class textbook (PDF). Other subjects come after V1 works end to end.
 - V1 retrieval by objective tag; pgvector/embeddings deferred.
 - English 3&4 is skills-based (text response, argument analysis, writing), not knowledge dot points. It will need its own objective and grading design before we build it.
 - **Public GitHub repo** (free branch protection + free Vercel collaboration). Because the code is public: no secrets, student data, real names or VCAA documents in the repo, ever.
 - *(open)* What parents can see (summaries only vs full responses).
+- Login: 6-digit email code (no magic links). Emails sent via Resend from `studyclub@mail.piyatissa.com` (Supabase custom SMTP). Code verified with `verifyOtp({ type: "email" })`.
+- No `invites` table: an admin creates people directly (People page); guardian consent is stored on the student's profile (`guardian_consent_at`, required by a CHECK constraint).
+- Light theme only for V1.
+
+---
+
+## 10. Current state (update this as things change)
+
+**Live:** https://study-club-dun.vercel.app · Vercel team `mithuru`, Hobby plan, functions in `syd1`.
+Preview links look like `https://study-club-git-<branch>-mithuru.vercel.app` (Vercel login required to view).
+**Supabase:** project `study-club` (ref `gufkqduptkzclhsoazbu`), Sydney, org "Mithuru", free plan. Public sign-ups OFF; "automatically expose new tables" OFF; Site URL = live site; redirect allow-list = live `/auth/callback` + `http://localhost:3000/auth/callback`.
+**Email:** Resend, domain `mail.piyatissa.com` (verified, Tokyo region, tracking off). The root domain piyatissa.com uses Google Workspace: never touch its DNS records.
+**Admin:** Nimesh (`nimesh@piyatissa.com`), role `admin`.
+
+**Done:** M0 and M1 (see docs/ROADMAP.md). Migrations applied: `20261112100000_profiles_and_links`.
+**Next:** M2: Year 8 Maths curriculum + textbook upload → AI-proposed objective map → mentor approval. Needs an Anthropic API key (Console, with a monthly spend limit) added to `.env.local` and Vercel as `ANTHROPIC_API_KEY`.
+
+**How work gets done right now**
+- Nimesh is new to GitHub. Explain steps plainly; one step at a time.
+- Claude works in the connected folder (a Linux VM with the repo mounted), makes branches and commits as `Nimesh Piyatissa <230788794+nimesh-afk@users.noreply.github.com>`, runs eslint + `tsc --noEmit` there (not `npm install` / `next build`: node_modules are macOS builds).
+- Claude pushes and opens/merges PRs using a fine-grained GitHub token in `.git/claude-token` (only this repo; Contents + Pull requests; expires Feb 2027). **Never print or log the token.** Merge only after Nimesh says "merge".
+- Nimesh runs `npm run dev` on his Mac to test locally.
+- Chami (second builder) hasn't joined yet. When she does: add as GitHub collaborator, set ruleset "protect-main" Required approvals to 1, add her on the People page.

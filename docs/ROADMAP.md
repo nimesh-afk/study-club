@@ -4,7 +4,7 @@ Each line marked ☐ is meant to be one branch → one pull request. Owner A and
 Suggested split: **A = accounts, security and dashboards**; **B = content pipeline and AI**.
 
 ## V1 goal
-One student can learn **Chemistry 3&4, Unit 3** end to end: the mentor uploads the study design → approves objectives → approves content → the student goes through the loop → mastery updates → all three dashboards show it.
+One student can learn **Year 8 Mathematics** end to end (start with one or two textbook chapters): the mentor uploads the Level 8 curriculum and the textbook PDF → approves objectives → approves content → the student goes through the loop → mastery updates → all three dashboards show it.
 
 ### M0: Foundations (both)
 - ☑ Blank Next.js app deployed to Vercel (`syd1`) with CLAUDE.md, ROADMAP.md, `.env.example`
@@ -18,15 +18,17 @@ One student can learn **Chemistry 3&4, Unit 3** end to end: the mentor uploads t
 - ☑ Role-based routing: student → /student, mentor → /mentor, parent → /parent
 - ☑ Custom email sender: Resend via mail.piyatissa.com (studyclub@mail.piyatissa.com)
 
-### M2: Study design → objective map (B)
+### M2: Curriculum → objective map (B)
+- ☐ Anthropic API key + `src/lib/ai/` wrapper (budget check, usage log, safety prompt) — pulled forward from M6
 - ☐ Migration: `subjects`, `source_documents`, `chunks`, `objectives`, `objective_prereqs` + RLS
-- ☐ Mentor upload of the study design PDF to a private bucket; text extraction
-- ☐ AI proposes objectives (one per key knowledge dot point) + prerequisites → saved as `draft`
+- ☐ Mentor upload of source PDFs (curriculum Level 8 Maths, textbook) to a private bucket; text extraction; chunk by section
+- ☐ AI proposes objectives (one per curriculum content description, split finer where needed) + prerequisites → saved as `draft`
+- ☐ Tag textbook chunks to objectives
 - ☐ Mentor review screen: edit, merge, split, approve, set prerequisites
 
 ### M3: Content per objective (B)
 - ☐ Migration: `content_items` + RLS
-- ☐ Generate a draft explanation, 5 retrieval questions and 1 worked example per approved objective
+- ☐ Generate a draft explanation, 5 retrieval questions and 1 worked example per approved objective, grounded in the tagged textbook chunks
 - ☐ Mentor content approval screen
 
 ### M4: Student learning loop (A + B)
@@ -51,10 +53,10 @@ One student can learn **Chemistry 3&4, Unit 3** end to end: the mentor uploads t
 **→ V1 release to one student.** Use it for 2 weeks, collect feedback, then continue.
 
 ## V1.1 and later (rough order)
-1. Examiner reports + past exams: upload, chunk, tag to objectives, version filtering
-2. Exam-style transfer questions linked to objectives (mastery level 4)
-3. Tune decay intervals from real data
-4. Add Biology 3&4, then Chemistry 1&2 (same model)
+1. Transfer questions from textbook chapter reviews (mastery level 4)
+2. Tune decay intervals from real data
+3. Add Chemistry 3&4 (study design + examiner reports + past exams, version filtering), then Biology 3&4, Chemistry 1&2
+4. Separate test database for preview links
 5. Installable on iPad/phone home screen (PWA), reminders
 6. Embeddings + pgvector search if tag retrieval isn't enough
 7. English 3&4 (needs its own design: skills, essay feedback, examiner criteria)
