@@ -11,12 +11,20 @@ export default async function MentorHome() {
         Uploads, objective maps and student progress will appear here.
       </p>
       {profile.role === "admin" && (
-        <Link
-          href="/mentor/people"
-          className="mt-6 inline-block rounded-lg border border-zinc-300 px-4 py-2 font-medium"
-        >
-          Manage people →
-        </Link>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link
+            href="/mentor/people"
+            className="inline-block rounded-lg border border-zinc-300 px-4 py-2 font-medium"
+          >
+            Manage people →
+          </Link>
+          <Link
+            href="/mentor/ai-check"
+            className="inline-block rounded-lg border border-zinc-300 px-4 py-2 font-medium"
+          >
+            AI check →
+          </Link>
+        </div>
       )}
     </SignedInShell>
   );
