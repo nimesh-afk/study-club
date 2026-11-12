@@ -19,7 +19,8 @@ One student can learn **Year 8 Mathematics** end to end (start with one or two t
 - ☑ Custom email sender: Resend via mail.piyatissa.com (studyclub@mail.piyatissa.com)
 
 ### M2: Curriculum → objective map (B)
-- ☐ Anthropic API key + `src/lib/ai/` wrapper (budget check, usage log, safety prompt) — pulled forward from M6
+- ☑ `src/lib/ai/` wrapper (budget check, per-student daily cap, usage log, safety prompt) + `ai_usage` migration + admin AI check page — pulled forward from M6
+- ☐ Anthropic API key (Console, monthly spend limit) in `.env.local` and Vercel; AI check page passes
 - ☐ Migration: `subjects`, `source_documents`, `chunks`, `objectives`, `objective_prereqs` + RLS
 - ☐ Mentor upload of source PDFs (curriculum Level 8 Maths, textbook) to a private bucket; text extraction; chunk by section
 - ☐ AI proposes objectives (one per curriculum content description, split finer where needed) + prerequisites → saved as `draft`
@@ -44,8 +45,8 @@ One student can learn **Year 8 Mathematics** end to end (start with one or two t
 - ☐ Parent: per-child summary (mastery by area, time spent, what's due)
 
 ### M6: Guardrails before real use (both)
-- ☐ `src/lib/ai/client.ts` wrapper: safety system prompt, budget check, usage logging, per-student daily cap
-- ☐ Migration: `ai_usage`, `safety_flags` + RLS
+- ☑ `src/lib/ai/client.ts` wrapper: safety system prompt, budget check, usage logging, per-student daily cap (done in M2)
+- ☐ Migration: `safety_flags` + RLS (`ai_usage` done in M2); tutor creates a flag row on distress
 - ☐ AI disclosure on student screens; privacy page
 - ☐ Anthropic Console spend limit; Supabase backups checked
 - ☐ Test pass with three real accounts (student, parent, mentor) on phone, iPad and laptop

@@ -67,7 +67,7 @@ Model names live in **one** place: `src/lib/ai/models.ts`. Default: a Sonnet-cla
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | browser + server | no (RLS protects data) |
 | `SUPABASE_SECRET_KEY` | **server only** | **yes** |
 | `ANTHROPIC_API_KEY` | **server only** | **yes** |
-| `AI_MONTHLY_BUDGET_CENTS` | server only | no |
+| `AI_MONTHLY_BUDGET_CENTS` | server only | no (US cents; AI stays paused if unset) |
 
 - Anything without the `NEXT_PUBLIC_` prefix must never be imported into a Client Component.
 - Real values live only in `.env.local` (git-ignored) and in Vercel → Settings → Environment Variables. `.env.example` lists the names with no values.
@@ -258,8 +258,8 @@ Preview links look like `https://study-club-git-<branch>-mithuru.vercel.app` (Ve
 **Email:** Resend, domain `mail.piyatissa.com` (verified, Tokyo region, tracking off). The root domain piyatissa.com uses Google Workspace: never touch its DNS records.
 **Admin:** Nimesh (`nimesh@piyatissa.com`), role `admin`.
 
-**Done:** M0 and M1 (see docs/ROADMAP.md). Migrations applied: `20261112100000_profiles_and_links`.
-**Next:** M2: Year 8 Maths curriculum + textbook upload → AI-proposed objective map → mentor approval. Needs an Anthropic API key (Console, with a monthly spend limit) added to `.env.local` and Vercel as `ANTHROPIC_API_KEY`.
+**Done:** M0, M1, and the M2 AI wrapper (`src/lib/ai/`, admin page `/mentor/ai-check`). Migrations applied: `20261112100000_profiles_and_links`, `20261112230000_ai_usage`.
+**Next:** M2: add the Anthropic API key (Console, with a monthly spend limit) to `.env.local` and Vercel as `ANTHROPIC_API_KEY`, check `/mentor/ai-check`; then the `subjects` / `source_documents` / `chunks` / `objectives` migration.
 
 **How work gets done right now**
 - Nimesh is new to GitHub. Explain steps plainly; one step at a time.
