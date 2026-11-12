@@ -10,8 +10,16 @@ export default async function MentorHome() {
       <p className="mt-2 text-zinc-600">
         Uploads, objective maps and student progress will appear here.
       </p>
+      <div className="mt-6 flex flex-wrap gap-3">
+        <Link
+          href="/mentor/sources"
+          className="inline-block rounded-lg border border-zinc-300 px-4 py-2 font-medium"
+        >
+          Source documents →
+        </Link>
+      </div>
       {profile.role === "admin" && (
-        <div className="mt-6 flex flex-wrap gap-3">
+        <div className="mt-3 flex flex-wrap gap-3">
           <Link
             href="/mentor/people"
             className="inline-block rounded-lg border border-zinc-300 px-4 py-2 font-medium"
