@@ -3,6 +3,11 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { SignedInShell } from "@/components/signed-in-shell";
 import { UploadForm, type SubjectOption } from "./upload-form";
+import { ExtractButton } from "./extract-button";
+
+// Text extraction runs in a server action on this page and can take a while
+// for a big textbook. 300 seconds is the Vercel Hobby maximum.
+export const maxDuration = 300;
 
 const typeLabel: Record<string, string> = {
   syllabus: "Curriculum",
@@ -27,7 +32,7 @@ export default async function SourcesPage() {
     supabase.from("subjects").select("id, code, name").order("name"),
     supabase
       .from("source_documents")
-      .select("id, title, type, status, created_at, subjects(name)")
+      .select("id, title, type, status, page_count, created_at, subjects(name), chunks(count)")
       .order("created_at", { ascending: false }),
   ]);
 
@@ -65,6 +70,14 @@ export default async function SourcesPage() {
                   {" · "}
                   {new Date(d.created_at).toLocaleDateString("en-AU")}
                 </span>
+                {d.status === "extracted" ? (
+                  <span className="text-sm text-zinc-600">
+                    {d.page_count} pages · {(d.chunks as unknown as { count: number }[])[0]?.count ?? 0}{" "}
+                    sections
+                  </span>
+                ) : (
+                  <ExtractButton documentId={d.id} />
+                )}
               </li>
             ))}
           </ul>
