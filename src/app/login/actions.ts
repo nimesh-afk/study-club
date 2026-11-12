@@ -72,9 +72,9 @@ export async function loginAction(
   // intent === "send"
   // shouldCreateUser: false -> this can never create an account.
   // Accounts are created only by an admin (invite-only, CLAUDE.md 1).
-  // The email's sign-in link returns to /auth/callback on the site the person
-  // is using (live site, a preview link, or localhost). Supabase only accepts
-  // addresses on its allow-list (Authentication > URL Configuration).
+  // The login email shows a 6-digit code (Supabase email template).
+  // emailRedirectTo is only used if a template ever includes a link again;
+  // Supabase only accepts addresses on its allow-list.
   const origin = (await headers()).get("origin") ?? "";
   const { error } = await supabase.auth.signInWithOtp({
     email,
@@ -99,7 +99,7 @@ export async function loginAction(
     step: "code",
     email,
     message:
-      "If this email belongs to a Study Club member, an email is on its way. Open its sign-in link on this device, in this browser. If the email shows a code instead, type it below.",
+      "If this email belongs to a Study Club member, a code is on its way. It can take a minute, and may land in spam the first time.",
     isError: false,
   };
 }

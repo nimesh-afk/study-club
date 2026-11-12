@@ -1,6 +1,6 @@
-// The sign-in link in the login email lands here.
-// Supabase's default email contains a link (not a code) until we set up our
-// own email sender (ROADMAP M1, custom SMTP). This handles both link styles:
+// Fallback for sign-in links. Our login email now shows a 6-digit code
+// (custom SMTP via Resend + edited template), so this is only used if an
+// email template ever contains a link again. Handles both link styles:
 //   ?code=...                 (default link, PKCE flow)
 //   ?token_hash=...&type=...  (custom templates, later)
 import { NextResponse, type NextRequest } from "next/server";
