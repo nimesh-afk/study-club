@@ -17,6 +17,12 @@ export default async function MentorHome() {
         >
           Source documents →
         </Link>
+        <Link
+          href="/mentor/objectives"
+          className="inline-block rounded-lg border border-zinc-300 px-4 py-2 font-medium"
+        >
+          Objectives →
+        </Link>
       </div>
       {profile.role === "admin" && (
         <div className="mt-3 flex flex-wrap gap-3">
