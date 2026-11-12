@@ -1,11 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { askClaudeJson, AiAnswerError } from "@/lib/ai/client";
 import { AI_PAUSED_MESSAGE, AiPausedError } from "@/lib/ai/budget";
 import { curriculumCodes } from "@/lib/extraction/split";
+import { createsLoop } from "@/lib/objectives/prereqs";
 import {
   PROPOSED_MAP_SCHEMA,
   PROPOSE_OBJECTIVES_INSTRUCTIONS,
@@ -176,4 +178,122 @@ export async function proposeObjectives(
     message: `Proposed ${newRows.length} draft objectives with ${prereqRows.length} prerequisite links. Review them below.`,
     isError: false,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Mentor review (CLAUDE.md 5.4). Objectives are set up once a year, so this is
+// deliberately simple: edit, delete drafts, approve, retire. Mentor's own
+// session: RLS decides what each mentor can change.
+// ---------------------------------------------------------------------------
+
+export type ReviewState = { message: string; isError: boolean };
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Save wording, strand and prerequisites of one objective.
+export async function saveObjective(
+  _previous: ReviewState,
+  formData: FormData,
+): Promise<ReviewState> {
+  await requireRole(["mentor", "admin"]);
+  const supabase = await createClient();
+
+  const id = String(formData.get("id") ?? "");
+  const statement = String(formData.get("statement") ?? "").trim();
+  const strand = String(formData.get("strand") ?? "");
+  const prereqIds = [...new Set(formData.getAll("prereq_ids").map(String))].filter(
+    (p) => UUID.test(p) && p !== id,
+  );
+
+  if (!UUID.test(id)) return { message: "Objective not found.", isError: true };
+  if (statement.length < 1 || statement.length > 500)
+    return { message: "The statement must be 1 to 500 characters.", isError: true };
+  if (!(STRANDS as readonly string[]).includes(strand))
+    return { message: "Please choose a strand.", isError: true };
+
+  const { data: objective } = await supabase
+    .from("objectives")
+    .select("id, subject_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (!objective) return { message: "Objective not found.", isError: true };
+
+  // Prerequisites must be objectives of the same subject, with no loops.
+  const { data: siblings } = await supabase
+    .from("objectives")
+    .select("id")
+    .eq("subject_id", objective.subject_id);
+  const siblingIds = new Set((siblings ?? []).map((s) => s.id));
+  if (prereqIds.some((p) => !siblingIds.has(p)))
+    return { message: "A chosen prerequisite isn't in this subject.", isError: true };
+
+  const { data: edges } = await supabase
+    .from("objective_prereqs")
+    .select("objective_id, prereq_id")
+    .in("objective_id", [...siblingIds]);
+  if (createsLoop(edges ?? [], id, prereqIds))
+    return {
+      message: "That would create a loop (one of those already needs this objective first).",
+      isError: true,
+    };
+
+  const { error: updateError } = await supabase
+    .from("objectives")
+    .update({ statement, area_of_study: strand })
+    .eq("id", id);
+  if (updateError) return { message: "Couldn't save the changes.", isError: true };
+
+  const { error: clearError } = await supabase
+    .from("objective_prereqs")
+    .delete()
+    .eq("objective_id", id);
+  if (clearError) return { message: "Couldn't update the prerequisites.", isError: true };
+  if (prereqIds.length > 0) {
+    const { error } = await supabase
+      .from("objective_prereqs")
+      .insert(prereqIds.map((p) => ({ objective_id: id, prereq_id: p })));
+    if (error) return { message: "Couldn't save the prerequisites.", isError: true };
+  }
+
+  revalidatePath("/mentor/objectives");
+  return { message: "Saved.", isError: false };
+}
+
+// Approve, retire or delete one objective. Deleting only works on drafts
+// (enforced by RLS too); approved objectives are retired instead.
+export async function changeObjectiveStatus(formData: FormData): Promise<void> {
+  const profile = await requireRole(["mentor", "admin"]);
+  const supabase = await createClient();
+  const id = String(formData.get("id") ?? "");
+  const action = String(formData.get("action") ?? "");
+  if (!UUID.test(id)) return;
+
+  if (action === "approve") {
+    await supabase
+      .from("objectives")
+      .update({ status: "approved", approved_by: profile.id, approved_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("status", "draft");
+  } else if (action === "retire") {
+    await supabase.from("objectives").update({ status: "retired" }).eq("id", id).eq("status", "approved");
+  } else if (action === "delete") {
+    await supabase.from("objectives").delete().eq("id", id).eq("status", "draft");
+    revalidatePath("/mentor/objectives");
+    redirect("/mentor/objectives");
+  }
+  revalidatePath("/mentor/objectives");
+}
+
+// Approve every draft of a subject at once, after a mentor has read them.
+export async function approveAllDrafts(formData: FormData): Promise<void> {
+  const profile = await requireRole(["mentor", "admin"]);
+  const supabase = await createClient();
+  const subjectId = String(formData.get("subject_id") ?? "");
+  if (!UUID.test(subjectId)) return;
+  await supabase
+    .from("objectives")
+    .update({ status: "approved", approved_by: profile.id, approved_at: new Date().toISOString() })
+    .eq("subject_id", subjectId)
+    .eq("status", "draft");
+  revalidatePath("/mentor/objectives");
 }

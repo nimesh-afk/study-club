@@ -248,6 +248,7 @@ npm test           # once tests are set up
 - Login: 6-digit email code (no magic links). Emails sent via Resend from `studyclub@mail.piyatissa.com` (Supabase custom SMTP). Code verified with `verifyOtp({ type: "email" })`.
 - No `invites` table: an admin creates people directly (People page); guardian consent is stored on the student's profile (`guardian_consent_at`, required by a CHECK constraint).
 - Light theme only for V1.
+- **Objectives are set up once a year per subject** (new curriculum/textbook upload → extract → AI proposes → mentor reviews and approves). So the review screen is deliberately simple: edit, delete drafts, approve one or all, retire. No merge/split tools: edit, delete or propose again instead.
 - Source PDFs upload straight from the mentor's browser to the private `sources` bucket (Vercel can't take requests over ~4.5 MB); a server action then checks the file and records it.
 - Source documents and chunks are readable by mentors/admins only. The tutor fetches one objective's chunks in server code (secret key), so students can never page through the textbook.
 
@@ -261,8 +262,8 @@ Preview links look like `https://study-club-git-<branch>-mithuru.vercel.app` (Ve
 **Email:** Resend, domain `mail.piyatissa.com` (verified, Tokyo region, tracking off). The root domain piyatissa.com uses Google Workspace: never touch its DNS records.
 **Admin:** Nimesh (`nimesh@piyatissa.com`), role `admin`.
 
-**Done:** M0, M1, the M2 AI wrapper, the M2 curriculum/objectives tables, PDF upload and text extraction (`/mentor/sources`), AI objective proposal (`/mentor/objectives`) (`src/lib/ai/`, admin page `/mentor/ai-check`). Migrations applied: `20261112100000_profiles_and_links`, `20261112230000_ai_usage`, `20261113090000_curriculum_and_objectives`, `20261113100000_sources_bucket`.
-**Next:** M2: upload the Victorian Curriculum 2.0 Maths Level 8 PDF (VCAA "Mathematics Level 8 map" .docx exported to PDF; VCAA F–10 site was under maintenance on 12 Nov 2026), extract it, press "Propose objectives with AI" on `/mentor/objectives`; then tag textbook chunks to objectives and build the mentor review screen. Textbook uploaded and extracted: Essential Mathematics for the Victorian Curriculum 8 (3rd ed.), 955 pages → 213 chunks covering 97 sections; chapter openers list the VC2M8 codes each chapter covers (29 codes).
+**Done:** M0, M1, the M2 AI wrapper, the M2 curriculum/objectives tables, PDF upload and text extraction (`/mentor/sources`), AI objective proposal and mentor review (`/mentor/objectives`, `/mentor/objectives/[id]`) (`src/lib/ai/`, admin page `/mentor/ai-check`). Migrations applied: `20261112100000_profiles_and_links`, `20261112230000_ai_usage`, `20261113090000_curriculum_and_objectives`, `20261113100000_sources_bucket`.
+**Next:** M2: upload the Victorian Curriculum 2.0 Maths Level 8 PDF (VCAA "Mathematics Level 8 map" .docx exported to PDF; VCAA F–10 site was under maintenance on 12 Nov 2026), extract it, press "Propose objectives with AI" on `/mentor/objectives`, review and approve; then tag textbook chunks to objectives (last M2 item). Textbook uploaded and extracted: Essential Mathematics for the Victorian Curriculum 8 (3rd ed.), 955 pages → 213 chunks covering 97 sections; chapter openers list the VC2M8 codes each chapter covers (29 codes).
 
 **How work gets done right now**
 - Nimesh is new to GitHub. Explain steps plainly; one step at a time.
