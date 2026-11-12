@@ -3,6 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { extractPages, SOURCE_RANK } from "@/lib/extraction/pdf";
+import { splitIntoChunks } from "@/lib/extraction/split";
 
 export type RecordState = { message: string; isError: boolean };
 
@@ -67,4 +70,76 @@ export async function recordUpload(input: {
 
   revalidatePath("/mentor/sources");
   return { message: `Uploaded “${title}”.`, isError: false };
+}
+
+export type ExtractState = { message: string; isError: boolean };
+
+// Step 3: read the PDF's text, split it into chunks and save them.
+// No AI is used, so this costs nothing. Mentors only. Chunks are written with
+// the admin client: ingestion is a server-only job (CLAUDE.md 6.2).
+export async function extractDocument(
+  _previous: ExtractState,
+  formData: FormData,
+): Promise<ExtractState> {
+  await requireRole(["mentor", "admin"]);
+  const documentId = String(formData.get("document_id") ?? "");
+
+  // Read the document through the mentor's own session (RLS applies).
+  const supabase = await createClient();
+  const { data: doc } = await supabase
+    .from("source_documents")
+    .select("id, type, status, storage_path, study_design_version")
+    .eq("id", documentId)
+    .maybeSingle();
+  if (!doc) return { message: "Document not found.", isError: true };
+  if (doc.status === "extracted") return { message: "Already extracted.", isError: false };
+
+  const admin = createAdminClient();
+  try {
+    const { data: file, error: downloadError } = await supabase.storage
+      .from("sources")
+      .download(doc.storage_path);
+    if (downloadError || !file) throw new Error("download failed");
+
+    const pages = await extractPages(new Uint8Array(await file.arrayBuffer()));
+    const chunks = splitIntoChunks(pages);
+    if (chunks.length === 0) throw new Error("no text found");
+
+    // A failed earlier attempt may have left some chunks: start clean.
+    const { error: clearError } = await admin.from("chunks").delete().eq("document_id", doc.id);
+    if (clearError) throw new Error("clear failed");
+
+    const rows = chunks.map((c) => ({
+      document_id: doc.id,
+      seq: c.seq,
+      heading: c.heading,
+      page_start: c.pageStart,
+      page_end: c.pageEnd,
+      text: c.text,
+      source_rank: SOURCE_RANK[doc.type] ?? 4,
+      study_design_version: doc.study_design_version,
+    }));
+    for (let i = 0; i < rows.length; i += 50) {
+      const { error } = await admin.from("chunks").insert(rows.slice(i, i + 50));
+      if (error) throw new Error("insert failed");
+    }
+
+    const { error: updateError } = await admin
+      .from("source_documents")
+      .update({ status: "extracted", page_count: pages.length })
+      .eq("id", doc.id);
+    if (updateError) throw new Error("status update failed");
+
+    revalidatePath("/mentor/sources");
+    return {
+      message: `Done: ${pages.length} pages split into ${chunks.length} sections.`,
+      isError: false,
+    };
+  } catch (error) {
+    await admin.from("source_documents").update({ status: "failed" }).eq("id", doc.id);
+    revalidatePath("/mentor/sources");
+    // Log only the step that failed, never document text (CLAUDE.md 6.1, 5.5).
+    console.error("extraction failed", error instanceof Error ? error.message : "unknown");
+    return { message: "Extraction failed. You can try again.", isError: true };
+  }
 }

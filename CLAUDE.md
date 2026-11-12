@@ -261,8 +261,8 @@ Preview links look like `https://study-club-git-<branch>-mithuru.vercel.app` (Ve
 **Email:** Resend, domain `mail.piyatissa.com` (verified, Tokyo region, tracking off). The root domain piyatissa.com uses Google Workspace: never touch its DNS records.
 **Admin:** Nimesh (`nimesh@piyatissa.com`), role `admin`.
 
-**Done:** M0, M1, the M2 AI wrapper, the M2 curriculum/objectives tables, and PDF upload (`/mentor/sources`) (`src/lib/ai/`, admin page `/mentor/ai-check`). Migrations applied: `20261112100000_profiles_and_links`, `20261112230000_ai_usage`, `20261113090000_curriculum_and_objectives`, `20261113100000_sources_bucket`.
-**Next:** M2: text extraction from uploaded PDFs and chunking by textbook section. Textbook: Essential Mathematics for the Victorian Curriculum 8 (3rd ed.), 955 pages, 25 MB, real text layer, sections like "6D".
+**Done:** M0, M1, the M2 AI wrapper, the M2 curriculum/objectives tables, PDF upload and text extraction (`/mentor/sources`) (`src/lib/ai/`, admin page `/mentor/ai-check`). Migrations applied: `20261112100000_profiles_and_links`, `20261112230000_ai_usage`, `20261113090000_curriculum_and_objectives`, `20261113100000_sources_bucket`.
+**Next:** M2: upload the Victorian Curriculum 2.0 Maths Level 8 PDF (VCAA site), then the AI proposes objectives. Textbook uploaded and extracted: Essential Mathematics for the Victorian Curriculum 8 (3rd ed.), 955 pages → 213 chunks covering 97 sections; chapter openers list the VC2M8 codes each chapter covers (29 codes).
 
 **How work gets done right now**
 - Nimesh is new to GitHub. Explain steps plainly; one step at a time.

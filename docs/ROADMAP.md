@@ -23,7 +23,7 @@ One student can learn **Year 8 Mathematics** end to end (start with one or two t
 - ☑ Anthropic API key (Console, monthly spend limit) in `.env.local` and Vercel; AI check page passes
 - ☑ Migration: `subjects` (seeded with MATH8), `source_documents`, `chunks`, `chunk_objectives`, `objectives`, `objective_prereqs` + RLS
 - ☑ Mentor upload of source PDFs (curriculum Level 8 Maths, textbook) to the private `sources` bucket (`/mentor/sources`)
-- ☐ Text extraction; chunk by textbook section (e.g. 6D)
+- ☑ Text extraction (no AI); chunk by textbook section (e.g. 6D), plus chapter openers (with curriculum codes), reviews, quizzes and answers
 - ☐ AI proposes objectives (one per curriculum content description, split finer where needed) + prerequisites → saved as `draft`
 - ☐ Tag textbook chunks to objectives
 - ☐ Mentor review screen: edit, merge, split, approve, set prerequisites
