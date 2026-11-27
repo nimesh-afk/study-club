@@ -10,39 +10,46 @@ Next.js-specific coding guidance (kept up to date by Next.js) is in AGENTS.md:
 
 ## 1. What we are building
 
-An adaptive learning app for a small, private family study club preparing for VCE.
+An adaptive learning app for a small, private family study club, covering **any Victorian high school subject** (Years 7–12).
 
-- **Subjects (in build order):** **Year 8 Mathematics** (Victorian Curriculum 2.0, Level 8) → Chemistry Units 3&4 → Biology Units 3&4 → Chemistry Units 1&2 → English Units 3&4.
-- **Users:** students (Year 8–12, about 13–18 years old, **all under 18**), mentors (adults who teach and approve content), parents (adults who watch progress).
+- **Subjects:** any subject a mentor sets up from its curriculum document: Victorian Curriculum 2.0 (Years 7–10) or a VCE study design (Units 1–4). **Pilot subject: VCE Chemistry Units 3&4** (study design 2024–2027). Year 8 Mathematics comes next; others follow.
+- **Users:** students (Year 7–12, about 12–18 years old, **all under 18**), mentors (adults who teach and approve content), parents (adults who watch progress).
 - **Devices:** iPad, laptop, phone. Every screen must work on a phone-width screen first.
-- **Access:** invite-only. Everyone logs in by email (magic link / one-time code). There is no public sign-up.
+- **Access:** invite-only. Everyone logs in by email (one-time code). There is no public sign-up.
 
-### How the learning works
-1. A mentor uploads source documents: VCE study design, past exams, examiner reports, notes.
-2. The AI breaks the study design into **atomic objectives**: one per key knowledge dot point, with prerequisites. A mentor reviews and approves the map. Nothing reaches a student until it is approved.
-3. Each objective gets content: explanation, retrieval questions, worked examples, linked past-exam questions. Mentors approve content too.
-4. The student loop: **diagnose → teach → explain back in own words (AI grades) → exam-style transfer questions → spaced repetition.**
-5. Each student has a **mastery score per objective (0–4)** that decays over time. An engine picks the next activity.
-6. Separate dashboards for student, mentor and parent.
+### Topics
+Each subject (per year level or unit pair) is split into **10–20 topics**. The AI proposes them from the curriculum document; a mentor reviews and approves them. Each topic has:
+- a short title and statement,
+- a list of **key points** (the curriculum dot points it covers), used to check notes and to tag questions,
+- a sort order (the study design's order). Mentors can lock topics to keep that order or leave them open. There is no prerequisite graph.
 
-### Mastery scale (do not change without updating this file)
-| Score | Meaning | How it's earned |
+Topics are stored in the existing `objectives` table (one row per topic).
+
+### How the learning works (the student's four steps)
+1. **Notes unlock the topic.** The student photographs their handwritten notes for a topic. The AI checks that the notes cover the topic's key points (coverage, not neatness) and says which points are missing. Accepted notes unlock step 2. A mentor can override the AI's decision. Notes are the key that opens a topic; they are not proof of learning.
+2. **Checkpoint quiz: 100% to pass.** 5–8 approved questions drawn at random from the topic's question bank, a **fresh draw on every attempt** (avoiding the previous attempt's questions where the bank allows). Instant feedback. **No waiting time** between attempts. Every question the student gets wrong goes straight into their review deck. Passing adds the topic's questions to the student's review deck.
+3. **Daily review (Anki style).** Spaced repetition on individual questions, **mixed across all of the student's unlocked topics** (interleaving). Multiple-choice and numeric answers are marked by the app; for written answers the student sees the model answer and rates themselves (Again / Hard / Good / Easy). No AI in the daily review.
+4. **Feynman (later, not V1).** The student explains a topic out loud; speech is transcribed and the AI grades the transcript against a rubric. Speech-to-text and this step are built after V1.
+
+### Spaced repetition (FSRS)
+- Each question a student studies is a **card** with its own schedule. We use **FSRS** (the Free Spaced Repetition Scheduler used by modern Anki) via the `ts-fsrs` package (MIT licence). A correct answer pushes the next review further out; a lapse brings it back.
+- **No separate decay rule:** FSRS tracks forgetting from real answers.
+- **Daily load is capped** so students don't drown in overdue cards. Defaults: at most 30 cards a day; due reviews first (most overdue first), then up to 10 new cards. All limits live in one config file (`src/lib/srs/config.ts`).
+- What comes next is decided by plain TypeScript with unit tests. **No AI call decides what comes next.**
+
+### Topic progress (do not change without updating this file)
+Each student has one stage per topic:
+
+| Stage | Meaning | How it's reached |
 |---|---|---|
-| 0 | Not yet known | Default, or failed diagnosis |
-| 1 | Recognises | Retrieval questions correct with hints |
-| 2 | Recalls | Retrieval questions correct unaided |
-| 3 | Explains | Explain-back graded ≥ pass threshold |
-| 4 | Transfers | Exam-style question correct on this objective |
+| Locked | Not started | Default |
+| Notes in | Notes accepted | AI (or a mentor) accepts the notes photos |
+| Checkpoint passed | Core knowledge checked | 100% on a checkpoint quiz |
+| Practising | Reviewing in the daily deck | Automatic after the checkpoint |
+| Secure | Remembered over weeks | At least 80% of the topic's cards are scheduled 21+ days out (thresholds in `src/lib/srs/config.ts`) |
+| Explained | Can teach it | Feynman step passed (later) |
 
-**Decay:** each score has a review interval (default 1, 3, 7, 14, 30 days for scores 0–4). If a review is overdue by more than one interval, the score shown drops by 1 until the student practises again. The intervals live in one config file (`src/lib/mastery/config.ts`).
-
-**Next-activity engine (V1 rules, in priority order):**
-1. Overdue reviews (most overdue first).
-2. In-progress objectives (score 1–3) whose prerequisites are all ≥ 2.
-3. Untouched objectives whose prerequisites are all ≥ 2 → start with diagnosis.
-4. Nothing ready? Review the weakest prerequisite.
-
-The engine is plain TypeScript with unit tests. **No AI call decides what comes next.**
+A topic can fall from Secure back to Practising if the student starts forgetting its cards.
 
 ---
 
@@ -79,15 +86,15 @@ Model names live in **one** place: `src/lib/ai/models.ts`. Default: a Sonnet-cla
 ```
 src/
   app/                    # routes
-    (auth)/               # login, auth callback
-    student/              # student dashboard + learning loop
-    mentor/               # uploads, objective map review, content approval, student overview
+    login/, auth/         # login, auth callback
+    student/              # student dashboard, notes upload, checkpoint, daily review
+    mentor/               # sources, topic review, question bank, notes overrides, student overview
     parent/               # read-only progress
   lib/
     supabase/             # client.ts, server.ts, proxy helper
     ai/                   # the only place that calls Claude: models.ts, client.ts, prompts/, safety.ts, budget.ts
-    mastery/              # engine, decay, config (pure functions + tests)
-    retrieval/            # fetch chunks for an objective, apply source hierarchy
+    srs/                  # FSRS wrapper, daily queue, topic stages, config (pure functions + tests)
+    extraction/           # PDF text extraction and splitting (no AI)
   components/
 supabase/
   migrations/             # every schema change is a migration file
@@ -99,58 +106,65 @@ docs/
 
 ## 4. Data model (V1 sketch — migrations are the source of truth)
 
-- `profiles` — id (= auth user id), role (`student` | `mentor` | `parent` | `admin`), display_name, year_level
+Built:
+- `profiles` — id (= auth user id), role (`student` | `mentor` | `parent` | `admin`), display_name, year_level, guardian_consent_at
 - `student_links` — student_id, linked_user_id, relationship (`mentor` | `parent`)
-- `invites` — email, role, invited_by, consent_recorded_at (parent/guardian consent for students)
-- `subjects` — code (e.g. `MATH8`), name, current_study_design_version
+- `subjects` — code (e.g. `CHEM34`, `MATH8`), name, current_study_design_version
 - `source_documents` — subject_id, type (`syllabus` | `textbook` | `examiner_report` | `past_exam` | `notes`), title, year, study_design_version, storage_path, status (`uploaded` | `extracted` | `failed`), uploaded_by. **Mentors only.**
-- `chunks` — document_id, seq, heading, page_start/page_end, text, source_rank, study_design_version, is_current. **Mentors only**; students get chunks only through server-side retrieval for one objective (5.3, 5.5).
-- `chunk_objectives` — chunk_id, objective_id (the objective tags used for retrieval)
-- `objectives` — subject_id, unit, area_of_study (Year 8: strand), code, statement, dot_point_text, sort_order, status (`draft` | `approved` | `retired`), approved_by, approved_at. Students/parents see approved only; approved objectives are retired, never deleted.
-- `objective_prereqs` — objective_id, prereq_id
-- `content_items` — objective_id, kind (`explanation` | `retrieval_q` | `worked_example` | `exam_q`), body (jsonb), source_chunk_ids, status (`draft` | `approved`)
-- `attempts` — student_id, objective_id, content_item_id, activity, response, score, ai_feedback, created_at
-- `mastery` — student_id, objective_id, score (0–4), last_practised_at, next_due_at
+- `chunks` — document_id, seq, heading, page_start/page_end, text, source_rank, study_design_version, is_current. **Mentors only.**
+- `chunk_objectives` — chunk_id, objective_id
+- `objectives` — **one row per topic**: subject_id, unit, area_of_study, code, statement, dot_point_text, sort_order, status (`draft` | `approved` | `retired`), approved_by, approved_at. Students/parents see approved only; approved topics are retired, never deleted. *(Needs a `key_points` column and a `locked` flag.)*
+- `objective_prereqs` — no longer used for ordering (topics use sort_order); kept until a later clean-up.
 - `ai_usage` — user_id, purpose, model, input_tokens, output_tokens, cost_cents, created_at
-- `safety_flags` — student_id, attempt_id, reason, created_at, reviewed_by, reviewed_at
+
+Planned:
+- `questions` — subject_id, objective_id (topic), source_document_id, source_ref (e.g. "2024 exam Section B Q5c"), kind (`mcq` | `numeric` | `short` | `extended`), body (jsonb: stem, options, figure path), answer (jsonb: correct option/value/tolerance or model answer + marking points), marks, study_design_version, is_current, status (`draft` | `approved` | `retired`). Students see approved questions only through server code, one at a time.
+- `notes_submissions` — student_id, objective_id, photo paths (private `notes` bucket), ai_result (jsonb: covered/missing key points), status (`checking` | `accepted` | `needs_more`), decided_by (`ai` | mentor id), created_at
+- `checkpoint_attempts` — student_id, objective_id, question_ids, answers, score, passed, created_at
+- `cards` — student_id, question_id, FSRS fields (due, stability, difficulty, elapsed_days, scheduled_days, reps, lapses, state, last_review)
+- `review_logs` — student_id, card id, rating, review time, previous schedule (kept so FSRS can be tuned later)
+- `topic_progress` — student_id, objective_id, stage (see 1. Topic progress), notes_accepted_at, checkpoint_passed_at, secure_at
+- `safety_flags` — student_id, reason, created_at, reviewed_by, reviewed_at
 
 ---
 
 ## 5. Content rules
 
 ### 5.1 Source hierarchy (highest wins when sources disagree)
-The "syllabus" is the document that defines the objectives. It depends on the subject.
+The "syllabus" is the document that defines the topics. It depends on the subject.
 
-**Year 8 Mathematics (V1 subject)**
-1. Victorian Curriculum 2.0 Mathematics, Level 8 (content descriptions and elaborations): defines the objectives
-2. The class textbook (a PDF): explanations, worked examples, exercises
-3. Mentor notes
-
-There are no exams or examiner reports at Year 8. The textbook's chapter reviews and harder exercises serve as the "transfer" questions (mastery level 4).
-
-**VCE subjects (later)**
-1. VCE study design (current version)
-2. VCAA examiner reports
+**VCE subjects (pilot: Chemistry Units 3&4)**
+1. VCE study design (current version): defines the topics and key points
+2. VCAA examiner reports (and marking guides)
 3. VCAA past exams
-4. Mentor notes and other notes
+4. Textbook, school tests, mentor notes
+
+**Years 7–10 (e.g. Year 8 Mathematics)**
+1. Victorian Curriculum 2.0 for that subject and level: defines the topics
+2. The class textbook (explanations, exercises, chapter reviews)
+3. School tests and mentor notes
 
 ### 5.2 Versioning
 - Every source document and chunk is tagged with the `study_design_version` it belongs to.
 - Content from an older study design is `is_current = false` and **excluded from retrieval by default**. A mentor can re-include a specific item if it's still relevant.
-- Past-exam questions from an older design must be checked by a mentor before they're linked to an objective.
+- Past-exam questions from an older design (for Chemistry 3&4: before 2024) are flagged `is_current = false` and excluded by default. A mentor can re-include one that still fits the current design.
 
-### 5.3 Retrieval
-- Chunks are tagged to objectives. For any interaction, fetch **only** the chunks tagged to the current objective (plus its direct prerequisites if needed), ordered by source rank.
-- V1 retrieves by objective tag (a plain SQL query). We add embeddings and pgvector search later, only if tag-based retrieval proves insufficient. Claude does not create embeddings; that needs a separate embeddings provider, which is a later decision.
-- Send the AI the smallest useful context. Never send a whole document.
+### 5.3 Question bank
+- Mentors and admins upload tests and past exams (PDF), ideally with their marking guide or examiner report.
+- The AI splits each paper into individual questions (multi-part questions become one question per part, keeping the shared stem), pairs each with its answer from the marking guide or report, and tags each with topic, kind, marks, source and study design version. Everything is saved as `draft`.
+- A mentor reviews and approves questions in bulk (approve all / approve one / edit / retire), the same way topics are approved.
+- **Figures:** questions that need a diagram, graph or table are flagged; the figure is saved as an image (private storage) and shown with the question.
+- The checkpoint and daily review only ever use `approved`, `is_current` questions.
+- Send the AI the smallest useful context: one paper (or one section of a long paper) at a time, never a whole textbook.
 
-### 5.4 Approval
-- AI-generated objectives and content start as `draft`. **Students only ever see `approved` items.**
-- When the AI grades or explains, it must stay within approved content and the retrieved chunks. If it can't answer from them, it says so and suggests asking a mentor. It doesn't make up chemistry or biology.
+### 5.4 Approval and marking
+- AI-generated topics and questions start as `draft`. **Students only ever see `approved` items.**
+- Marking: multiple-choice and numeric answers are marked by code (numeric with a tolerance). In the **checkpoint**, short written answers are marked by the cheap AI model against the approved model answer and marking points. In the **daily review**, written answers are self-rated after seeing the model answer (no AI).
+- When the AI marks or checks notes, it must stay within the approved key points, questions and answers. If it can't decide, it says so and suggests asking a mentor. It doesn't make up content.
 
 ### 5.5 Copyright
 - The textbook PDF is the publisher's copyright, and VCAA documents are VCAA copyright. Keep them in **private** Supabase Storage for club members only. Never share them outside the club.
-- Never paste long passages of the textbook into prompts or show them to students wholesale: use the relevant chunk only (5.3).
+- Never paste long passages of the textbook into prompts or show them to students wholesale.
 - **Never commit source documents to the git repo.** Never make them publicly reachable.
 
 ---
@@ -160,7 +174,8 @@ There are no exams or examiner reports at Year 8. The textbook's chapter reviews
 Students are minors. These rules are not optional, and they apply to every feature.
 
 ### 6.1 Data minimisation
-- Store a display name (first name is fine), email, year level and role. **No** date of birth, address, phone number, school ID or photos.
+- Store a display name (first name is fine), email, year level and role. **No** date of birth, address, phone number, school ID or photos of people.
+- **Notes photos** are the one exception for images: photos of handwritten notes only. The upload screen asks students not to include faces, names or anything personal. They live in a **private** `notes` bucket, are visible only to the student, their mentors and admins, and are **deleted 30 days after the notes are decided**; only the AI's result (covered/missing key points) is kept.
 - Prompts sent to Claude must **not** contain student names or emails. Use internal IDs only.
 - Do not log student responses, prompts or AI outputs to the console or to Vercel logs. Store them only in the database, protected by RLS.
 - No third-party analytics, ad, or tracking scripts.
@@ -173,16 +188,16 @@ Students are minors. These rules are not optional, and they apply to every featu
   3. `grant` only the privileges needed (e.g. `select, insert, update, delete`) to the `authenticated` role.
   - Grant to `anon` **only** if logged-out users truly need it (almost never in this app), and say why in a comment in the migration.
   - GRANTs decide *whether* a role can touch the table at all; RLS policies decide *which rows*. We need both.
-- Students: read/write their own attempts and mastery; read approved objectives/content.
-- Mentors: read their linked students' data; create/approve objectives and content.
-- Parents: read their linked students' **progress summaries** (mastery, activity, time). By default they do not see full free-text responses. *(Decision to confirm with the family.)*
+- Students: read/write their own notes submissions, checkpoint attempts, cards and review logs; read approved topics. Questions reach students only through server code, one at a time.
+- Mentors: read their linked students' data; create/approve topics and questions; override notes decisions.
+- Parents: read their linked students' **progress summaries** (topic stages, activity, time). By default they do not see full free-text responses. *(Decision to confirm with the family.)*
 - The `SUPABASE_SECRET_KEY` (bypasses RLS) is used only in server code for admin jobs: invites, ingestion, usage logging. Never use it in request paths where the user's own session would do.
 
 ### 6.3 AI safety (Anthropic requirements for products used by minors)
-- The UI clearly says the tutor is **an AI, not a person**, on the student screens and in the onboarding.
+- The UI clearly says marking and notes checks are done by **an AI, not a person**, on the student screens and in the onboarding.
 - Every Claude call goes through `src/lib/ai/client.ts`, which:
   - adds the child-safety system prompt (`src/lib/ai/prompts/safety.ts`) and any child-safety prompt Anthropic provides;
-  - keeps the tutor on-topic (VCE study only) and age-appropriate;
+  - keeps the AI on-topic (school study only) and age-appropriate;
   - checks the monthly budget **before** calling and records usage **after** (`ai_usage`);
   - returns structured output (JSON) for grading.
 - If a student's message suggests distress, self-harm or risk of harm: the tutor responds supportively and briefly, gives Kids Helpline (1800 55 1800) and Lifeline (13 11 14), does not continue tutoring in that turn, and creates a `safety_flags` row for a mentor to review.
@@ -240,17 +255,25 @@ npm test           # once tests are set up
 - Hosting in Sydney regions (Vercel `syd1`, Supabase `ap-southeast-2`).
 - No local LLM / Mac mini.
 - Invite-only, email login.
-- **V1 = Year 8 Mathematics** (replaced Chemistry 3&4 as the first subject, Nov 2026). Source = Victorian Curriculum 2.0 Maths Level 8 + the class textbook (PDF). Other subjects come after V1 works end to end.
-- V1 retrieval by objective tag; pgvector/embeddings deferred.
+- ~~V1 = Year 8 Mathematics~~ (Nov 2026, superseded 27 Nov 2026 below).
+- **27 Nov 2026: new learning design.** The app covers any Victorian high school subject (Years 7–12). **Pilot subject: VCE Chemistry Units 3&4** (study design 2024–2027; 2027 is its last year). Year 8 Mathematics comes next.
+- Subjects are split into **10–20 topics** (stored in `objectives`), each with key points. Topic order = study design order; no prerequisite graph.
+- Student flow: **notes photos unlock a topic → checkpoint quiz (100%, fresh random draw each attempt, no wait between attempts) → daily spaced-repetition review → Feynman voice explanation (later)**. This replaces the old diagnose → teach → explain-back loop and the 0–4 mastery score with decay.
+- **Spaced repetition: FSRS via `ts-fsrs`** (MIT), scheduling individual questions, mixed across topics, with a daily cap. Dependency approved by Nimesh; add it in the PR that builds the review step.
+- Question bank is built from uploaded tests and past exams: AI extracts and tags questions, mentors approve in bulk.
+- Daily review written answers are self-rated (no AI); checkpoint short answers are AI-marked against the model answer.
+- Notes photos: AI decides, mentor can override; photos deleted 30 days after the decision.
+- Speech-to-text provider for the Feynman step: decide later.
+- Retrieval by tag; pgvector/embeddings deferred.
 - English 3&4 is skills-based (text response, argument analysis, writing), not knowledge dot points. It will need its own objective and grading design before we build it.
 - **Public GitHub repo** (free branch protection + free Vercel collaboration). Because the code is public: no secrets, student data, real names or VCAA documents in the repo, ever.
 - *(open)* What parents can see (summaries only vs full responses).
 - Login: 6-digit email code (no magic links). Emails sent via Resend from `studyclub@mail.piyatissa.com` (Supabase custom SMTP). Code verified with `verifyOtp({ type: "email" })`.
 - No `invites` table: an admin creates people directly (People page); guardian consent is stored on the student's profile (`guardian_consent_at`, required by a CHECK constraint).
 - Light theme only for V1.
-- **Objectives are set up once a year per subject** (new curriculum/textbook upload → extract → AI proposes → mentor reviews and approves). So the review screen is deliberately simple: edit, delete drafts, approve one or all, retire. No merge/split tools: edit, delete or propose again instead.
+- **Topics are set up once a year per subject** (new curriculum/textbook upload → extract → AI proposes → mentor reviews and approves). So the review screen is deliberately simple: edit, delete drafts, approve one or all, retire. No merge/split tools: edit, delete or propose again instead.
 - Source PDFs upload straight from the mentor's browser to the private `sources` bucket (Vercel can't take requests over ~4.5 MB); a server action then checks the file and records it.
-- Source documents and chunks are readable by mentors/admins only. The tutor fetches one objective's chunks in server code (secret key), so students can never page through the textbook.
+- Source documents and chunks are readable by mentors/admins only, so students can never page through the textbook or exams.
 
 ---
 
@@ -263,11 +286,12 @@ Preview links look like `https://study-club-git-<branch>-mithuru.vercel.app` (Ve
 **Admin:** Nimesh (`nimesh@piyatissa.com`), role `admin`.
 
 **Done:** M0, M1, the M2 AI wrapper, the M2 curriculum/objectives tables, PDF upload and text extraction (`/mentor/sources`), AI objective proposal and mentor review (`/mentor/objectives`, `/mentor/objectives/[id]`) (`src/lib/ai/`, admin page `/mentor/ai-check`). Migrations applied: `20261112100000_profiles_and_links`, `20261112230000_ai_usage`, `20261113090000_curriculum_and_objectives`, `20261113100000_sources_bucket`.
-**Next:** M2: upload the Victorian Curriculum 2.0 Maths Level 8 PDF (VCAA "Mathematics Level 8 map" .docx exported to PDF; VCAA F–10 site was under maintenance on 12 Nov 2026), extract it, press "Propose objectives with AI" on `/mentor/objectives`, review and approve; then tag textbook chunks to objectives (last M2 item). Textbook uploaded and extracted: Essential Mathematics for the Victorian Curriculum 8 (3rd ed.), 955 pages → 213 chunks covering 97 sections; chapter openers list the VC2M8 codes each chapter covers (29 codes).
+**Next:** see `docs/ROADMAP.md`. First: make subjects and topics generic (M2b), set up `CHEM34`, upload the VCE Chemistry study design (VCAA .docx exported to PDF), propose and approve 10–20 topics. Then the question bank (M3).
+Year 8 Maths so far: textbook uploaded and extracted (Essential Mathematics for the Victorian Curriculum 8, 3rd ed., 955 pages → 213 chunks); no curriculum or objectives yet.
 
 **How work gets done right now**
 - Nimesh is new to GitHub. Explain steps plainly; one step at a time.
-- Claude works in the connected folder (a Linux VM with the repo mounted), makes branches and commits as `Nimesh Piyatissa <230788794+nimesh-afk@users.noreply.github.com>`, runs eslint + `tsc --noEmit` there (not `npm install` / `next build`: node_modules are macOS builds).
-- Claude pushes and opens/merges PRs using a fine-grained GitHub token in `.git/claude-token` (only this repo; Contents + Pull requests; expires Feb 2027). **Never print or log the token.** Merge only after Nimesh says "merge".
+- Claude makes branches and commits as `Nimesh Piyatissa <230788794+nimesh-afk@users.noreply.github.com>`, pushes and opens/merges PRs through the Claude GitHub App (connected 27 Nov 2026). Merge only after Nimesh says "merge". After a merge, Claude brings Nimesh's Mac copy (`~/Documents/study-club`) up to date on `main`.
+- Older setup: a fine-grained GitHub token in `.git/claude-token` on the Mac (expires Feb 2027). **Never print or log the token.**
 - Nimesh runs `npm run dev` on his Mac to test locally.
 - Chami (second builder) hasn't joined yet. When she does: add as GitHub collaborator, set ruleset "protect-main" Required approvals to 1, add her on the People page.
