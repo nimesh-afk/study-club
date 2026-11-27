@@ -4,7 +4,9 @@ Each line marked ☐ is meant to be one branch → one pull request. Owner A and
 Suggested split: **A = accounts, security and dashboards**; **B = content pipeline and AI**.
 
 ## V1 goal
-One student can learn **Year 8 Mathematics** end to end (start with one or two textbook chapters): the mentor uploads the Level 8 curriculum and the textbook PDF → approves objectives → approves content → the student goes through the loop → mastery updates → all three dashboards show it.
+One student can learn **VCE Chemistry Units 3&4** end to end (start with two or three topics): the mentor uploads the study design and past exams → approves 10–20 topics → approves the question bank → the student uploads notes, passes checkpoints and does daily reviews → topic stages update → all three dashboards show it.
+
+Built to work for **any Victorian high school subject**; Year 8 Mathematics is the second subject.
 
 ### M0: Foundations (both)
 - ☑ Blank Next.js app deployed to Vercel (`syd1`) with CLAUDE.md, ROADMAP.md, `.env.example`
@@ -18,47 +20,55 @@ One student can learn **Year 8 Mathematics** end to end (start with one or two t
 - ☑ Role-based routing: student → /student, mentor → /mentor, parent → /parent
 - ☑ Custom email sender: Resend via mail.piyatissa.com (studyclub@mail.piyatissa.com)
 
-### M2: Curriculum → objective map (B)
-- ☑ `src/lib/ai/` wrapper (budget check, per-student daily cap, usage log, safety prompt) + `ai_usage` migration + admin AI check page — pulled forward from M6
+### M2: Curriculum → objectives (B) — built, now being generalised
+- ☑ `src/lib/ai/` wrapper (budget check, per-student daily cap, usage log, safety prompt) + `ai_usage` migration + admin AI check page
 - ☑ Anthropic API key (Console, monthly spend limit) in `.env.local` and Vercel; AI check page passes
-- ☑ Migration: `subjects` (seeded with MATH8), `source_documents`, `chunks`, `chunk_objectives`, `objectives`, `objective_prereqs` + RLS
-- ☑ Mentor upload of source PDFs (curriculum Level 8 Maths, textbook) to the private `sources` bucket (`/mentor/sources`)
-- ☑ Text extraction (no AI); chunk by textbook section (e.g. 6D), plus chapter openers (with curriculum codes), reviews, quizzes and answers
-- ☑ AI proposes objectives (one per curriculum content description, split finer where needed) + prerequisites → saved as `draft` (`/mentor/objectives`; built, waiting for the curriculum PDF to run for real)
-- ☐ Tag textbook chunks to objectives
-- ☑ Mentor review screen (kept simple: objectives are set once a year): edit wording/strand/prerequisites, delete drafts, approve one or all, retire
+- ☑ Migration: `subjects`, `source_documents`, `chunks`, `chunk_objectives`, `objectives`, `objective_prereqs` + RLS
+- ☑ Mentor upload of source PDFs to the private `sources` bucket (`/mentor/sources`)
+- ☑ Text extraction (no AI) and chunking
+- ☑ AI proposes objectives + mentor review screen (`/mentor/objectives`)
 
-### M3: Content per objective (B)
-- ☐ Migration: `content_items` + RLS
-- ☐ Generate a draft explanation, 5 retrieval questions and 1 worked example per approved objective, grounded in the tagged textbook chunks
-- ☐ Mentor content approval screen
+### M2b: Any subject, 10–20 topics (B)
+- ☐ Migration: seed `CHEM34`; add `key_points` and `locked` to `objectives`; per-subject structure (e.g. "Area of Study" vs "Strand") stored on `subjects`
+- ☐ Remove Year-8-Maths-only code (subject picker on mentor pages; strands/code prefixes from the subject, not constants)
+- ☐ AI proposes **10–20 topics** with key points (replaces fine-grained objectives + prerequisites); review screen shows key points
+- ☐ Run it for real: upload the VCE Chemistry study design PDF, propose, review, approve
 
-### M4: Student learning loop (A + B)
-- ☐ Migration: `attempts`, `mastery` + RLS
-- ☐ Mastery engine + decay + next-activity rules as pure functions **with unit tests** (A)
-- ☐ Diagnose (3 quick questions) → teach (explanation + worked example) → retrieval (B)
-- ☐ Explain-back: student writes in their own words; AI grades against a rubric, returns JSON score + feedback (B)
-- ☐ "Today" queue for the student, driven by the engine (A)
+### M3: Question bank (B)
+- ☐ Migration: `questions` + RLS
+- ☐ Upload tests/past exams with marking guides or examiner reports (type `past_exam` / `examiner_report`)
+- ☐ AI splits papers into questions, pairs answers, tags topic/kind/marks/source/version → drafts
+- ☐ Figures: flag questions that need a diagram; save the figure image to private storage
+- ☐ Mentor question review: approve all / one, edit, retire; filter by topic and source
+
+### M4: Student flow (A + B)
+- ☐ Migration: `notes_submissions`, private `notes` bucket (30-day deletion), `topic_progress` + RLS
+- ☐ Step 1: notes photo upload (phone camera) → AI checks coverage of key points → accepted / needs more; mentor override (B)
+- ☐ Migration: `checkpoint_attempts` + RLS
+- ☐ Step 2: checkpoint quiz — 5–8 random approved questions, 100% to pass, fresh draw each attempt, no wait; wrong answers go into the deck (A + B)
+- ☐ Migration: `cards`, `review_logs` + RLS; add `ts-fsrs`
+- ☐ `src/lib/srs/`: FSRS wrapper, daily queue (due first, then new, capped), topic stages incl. "Secure", config — pure functions **with unit tests** (A)
+- ☐ Step 3: daily review screen — auto-mark MCQ/numeric, self-rate written answers, interleaved across topics (A)
 
 ### M5: Dashboards (A)
-- ☐ Student: objective map coloured by mastery, today's queue, streak
-- ☐ Mentor: grid of students × objectives, recent explain-backs, safety flags, draft queue
-- ☐ Parent: per-child summary (mastery by area, time spent, what's due)
+- ☐ Student: topics with their stage, today's review count, streak
+- ☐ Mentor: grid of students × topics (stage), notes waiting for override, question drafts, safety flags
+- ☐ Parent: per-child summary (topic stages, time spent, reviews due)
 
 ### M6: Guardrails before real use (both)
-- ☑ `src/lib/ai/client.ts` wrapper: safety system prompt, budget check, usage logging, per-student daily cap (done in M2)
-- ☐ Migration: `safety_flags` + RLS (`ai_usage` done in M2); tutor creates a flag row on distress
-- ☐ AI disclosure on student screens; privacy page
-- ☐ Anthropic Console spend limit; Supabase backups checked
+- ☑ `src/lib/ai/client.ts` wrapper: safety system prompt, budget check, usage logging, per-student daily cap
+- ☐ Migration: `safety_flags` + RLS
+- ☐ AI disclosure on student screens; privacy page (incl. notes photos and their deletion)
+- ☐ Anthropic Console spend limit; Supabase backups checked; decide on Supabase Pro (free projects pause after a week idle)
 - ☐ Test pass with three real accounts (student, parent, mentor) on phone, iPad and laptop
 
 **→ V1 release to one student.** Use it for 2 weeks, collect feedback, then continue.
 
 ## V1.1 and later (rough order)
-1. Transfer questions from textbook chapter reviews (mastery level 4)
-2. Tune decay intervals from real data
-3. Add Chemistry 3&4 (study design + examiner reports + past exams, version filtering), then Biology 3&4, Chemistry 1&2
+1. Year 8 Mathematics (curriculum + textbook + school tests through the same pipeline)
+2. Step 4: Feynman — student explains a topic by voice; speech-to-text (provider to decide); AI grades the transcript against a rubric
+3. Tune FSRS from real review logs
 4. Separate test database for preview links
-5. Installable on iPad/phone home screen (PWA), reminders
-6. Embeddings + pgvector search if tag retrieval isn't enough
+5. Installable on iPad/phone home screen (PWA), daily review reminders
+6. More subjects: Biology 3&4, Chemistry 1&2, …
 7. English 3&4 (needs its own design: skills, essay feedback, examiner criteria)
