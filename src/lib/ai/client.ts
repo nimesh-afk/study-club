@@ -31,6 +31,8 @@ export type AskOptions = {
   instructions: string;
   // The message to answer: keep it to the smallest useful context (CLAUDE.md 5.3).
   prompt: string;
+  // Optional images (e.g. photos of notes), sent before the prompt text.
+  images?: { mediaType: "image/jpeg" | "image/png" | "image/webp"; base64: string }[];
   maxTokens?: number;
 };
 
@@ -56,7 +58,20 @@ async function callClaude(
       { type: "text", text: SAFETY_SYSTEM_PROMPT },
       { type: "text", text: options.instructions },
     ],
-    messages: [{ role: "user", content: options.prompt }],
+    messages: [
+      {
+        role: "user",
+        content: options.images?.length
+          ? [
+              ...options.images.map((image) => ({
+                type: "image" as const,
+                source: { type: "base64" as const, media_type: image.mediaType, data: image.base64 },
+              })),
+              { type: "text" as const, text: options.prompt },
+            ]
+          : options.prompt,
+      },
+    ],
     ...(jsonSchema
       ? { output_config: { format: { type: "json_schema", schema: jsonSchema } } }
       : {}),

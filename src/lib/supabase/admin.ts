@@ -1,8 +1,10 @@
 // ADMIN Supabase client. Uses the SECRET key, which BYPASSES row-level security.
 // Rules (CLAUDE.md 6.2):
 //   * Server code only. Never import this from a Client Component.
-//   * Only call it after checking the user is an admin (requireRole(["admin"])).
-//   * Only for jobs a normal session can't do: creating people, linking them.
+//   * Only call it after checking who is asking (requireRole + ownership checks).
+//   * Only for jobs a normal session can't do: creating people, linking them,
+//     usage logging, and trusted results the API won't let users write
+//     (topic stages, notes check results: src/lib/notes/service.ts).
 import { createClient } from "@supabase/supabase-js";
 
 export function createAdminClient() {

@@ -119,12 +119,13 @@ Built:
 
 - `questions` — subject_id, objective_id (topic; null until a mentor picks one if the AI couldn't), source_document_id, source_ref (e.g. "Section B Q5c"), source_seq, kind (`mcq` | `numeric` | `short` | `extended`), context (shared stem of a multi-part question), stem, options (jsonb, MCQ only), answer (jsonb: `correct_option` / `value`+`unit`+`tolerance_pct` / `model_answer`+`marking_points`; `ai_suggested: true` when the AI worked it out without a marking guide, cleared when a mentor saves), marks, needs_figure, figure_page, figure_path, study_design_version, is_current, status (`draft` | `approved` | `retired`). **Mentors only**; students get questions through server code (M4). Approving needs a topic. Screens: `/mentor/questions`.
 
+- `topic_progress` — student_id, objective_id, stage (`locked` | `notes_in` | `checkpoint_passed` | `practising` | `secure` | `explained`), notes_accepted_at, checkpoint_passed_at, secure_at. Read: the student, linked mentors/parents, admins. **Written only by server code** (admin client) so stages can be trusted.
+- `notes_submissions` — student_id, objective_id, photo_paths (private `notes` bucket, `<student_id>/<uuid>.jpg`), status (`checking` | `accepted` | `needs_more` | `failed`), ai_result (jsonb: per key point yes/partly/no, feedback, readable, is_study_notes), decided_by (`ai` | `mentor`), decided_by_user, decided_at, photos_deleted_at. Read: the student, linked mentors, admins (not parents). Written only by server code. Screens: `/student/topics/[id]`, `/mentor/notes`.
+
 Planned:
-- `notes_submissions` — student_id, objective_id, photo paths (private `notes` bucket), ai_result (jsonb: covered/missing key points), status (`checking` | `accepted` | `needs_more`), decided_by (`ai` | mentor id), created_at
 - `checkpoint_attempts` — student_id, objective_id, question_ids, answers, score, passed, created_at
 - `cards` — student_id, question_id, FSRS fields (due, stability, difficulty, elapsed_days, scheduled_days, reps, lapses, state, last_review)
 - `review_logs` — student_id, card id, rating, review time, previous schedule (kept so FSRS can be tuned later)
-- `topic_progress` — student_id, objective_id, stage (see 1. Topic progress), notes_accepted_at, checkpoint_passed_at, secure_at
 - `safety_flags` — student_id, reason, created_at, reviewed_by, reviewed_at
 
 ---
@@ -189,10 +190,10 @@ Students are minors. These rules are not optional, and they apply to every featu
   3. `grant` only the privileges needed (e.g. `select, insert, update, delete`) to the `authenticated` role.
   - Grant to `anon` **only** if logged-out users truly need it (almost never in this app), and say why in a comment in the migration.
   - GRANTs decide *whether* a role can touch the table at all; RLS policies decide *which rows*. We need both.
-- Students: read/write their own notes submissions, checkpoint attempts, cards and review logs; read approved topics. Questions reach students only through server code, one at a time.
+- Students: read their own topic progress and notes submissions (server code writes them), upload to their own folder of the `notes` bucket, read/write their own cards and review logs; read approved topics. Questions reach students only through server code, one at a time.
 - Mentors: read their linked students' data; create/approve topics and questions; override notes decisions.
 - Parents: read their linked students' **progress summaries** (topic stages, activity, time). By default they do not see full free-text responses. *(Decision to confirm with the family.)*
-- The `SUPABASE_SECRET_KEY` (bypasses RLS) is used only in server code for admin jobs: invites, ingestion, usage logging. Never use it in request paths where the user's own session would do.
+- The `SUPABASE_SECRET_KEY` (bypasses RLS) is used only in server code for admin jobs: invites, ingestion, usage logging, and trusted results users may read but not write (topic stages, notes decisions), always after checking who is asking. Never use it where the user's own session would do.
 
 ### 6.3 AI safety (Anthropic requirements for products used by minors)
 - The UI clearly says marking and notes checks are done by **an AI, not a person**, on the student screens and in the onboarding.
@@ -263,7 +264,9 @@ npm test           # once tests are set up
 - **Spaced repetition: FSRS via `ts-fsrs`** (MIT), scheduling individual questions, mixed across topics, with a daily cap. Dependency approved by Nimesh; add it in the PR that builds the review step.
 - Question bank is built from uploaded tests and past exams: AI extracts and tags questions, mentors approve in bulk.
 - Daily review written answers are self-rated (no AI); checkpoint short answers are AI-marked against the model answer.
-- Notes photos: AI decides, mentor can override; photos deleted 30 days after the decision.
+- Notes photos: AI decides, mentor can override; photos deleted 30 days after the decision. Pass rule: at least 80% of key points covered ("partly" counts half), readable, and actually study notes (`src/lib/notes/decide.ts`). Photos are shrunk to 1,600 px JPEG in the browser before upload. Old photos are deleted whenever notes are submitted or decided (no scheduled job).
+- Students see every subject that has approved topics (no per-student subject enrolment yet).
+- Trusted results (topic stages, notes decisions) are written by server code with the admin client after checking the caller; the API gives users read-only access to them.
 - Speech-to-text provider for the Feynman step: decide later.
 - Retrieval by tag; pgvector/embeddings deferred.
 - English 3&4 is skills-based (text response, argument analysis, writing), not knowledge dot points. It will need its own objective and grading design before we build it.

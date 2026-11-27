@@ -42,8 +42,8 @@ Built to work for **any Victorian high school subject**; Year 8 Mathematics is t
 - ☑ Mentor question review: approve all / one, edit, retire; filter by topic and source
 
 ### M4: Student flow (A + B)
-- ☐ Migration: `notes_submissions`, private `notes` bucket (30-day deletion), `topic_progress` + RLS
-- ☐ Step 1: notes photo upload (phone camera) → AI checks coverage of key points → accepted / needs more; mentor override (B)
+- ☑ Migration: `notes_submissions`, private `notes` bucket (30-day deletion), `topic_progress` + RLS
+- ☑ Step 1: notes photo upload (phone camera) → AI checks coverage of key points → accepted / needs more; mentor override (B)
 - ☐ Migration: `checkpoint_attempts` + RLS
 - ☐ Step 2: checkpoint quiz — 5–8 random approved questions, 100% to pass, fresh draw each attempt, no wait; wrong answers go into the deck (A + B)
 - ☐ Migration: `cards`, `review_logs` + RLS; add `ts-fsrs`
