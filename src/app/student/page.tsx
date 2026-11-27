@@ -3,15 +3,7 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { SignedInShell } from "@/components/signed-in-shell";
 import { STAGE_LABEL, canStartTopic, type Stage } from "@/lib/progress/stages";
-
-const stageStyle: Record<Stage, string> = {
-  locked: "bg-zinc-100 text-zinc-700",
-  notes_in: "bg-blue-100 text-blue-900",
-  checkpoint_passed: "bg-indigo-100 text-indigo-900",
-  practising: "bg-amber-100 text-amber-900",
-  secure: "bg-green-100 text-green-900",
-  explained: "bg-green-200 text-green-950",
-};
+import { STAGE_STYLE } from "@/components/student-progress";
 
 type Topic = {
   id: string;
@@ -65,7 +57,7 @@ export default async function StudentHome() {
                   <li key={t.id}>
                     <Link href={`/student/topics/${t.id}`} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-zinc-50">
                       <span className={open || stage !== "locked" ? "" : "text-zinc-400"}>{t.title ?? t.statement}</span>
-                      <span className={`shrink-0 rounded px-2 py-0.5 text-xs font-medium ${stageStyle[stage]}`}>
+                      <span className={`shrink-0 rounded px-2 py-0.5 text-xs font-medium ${STAGE_STYLE[stage]}`}>
                         {stage === "locked" && !open ? "Later" : STAGE_LABEL[stage]}
                       </span>
                     </Link>

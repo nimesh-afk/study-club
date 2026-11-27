@@ -68,6 +68,12 @@ export default async function MentorHome() {
           Question bank →
         </Link>
         <Link
+          href="/mentor/students"
+          className="inline-block rounded-lg border border-zinc-300 px-4 py-2 font-medium"
+        >
+          Students →
+        </Link>
+        <Link
           href="/mentor/notes"
           className="inline-block rounded-lg border border-zinc-300 px-4 py-2 font-medium"
         >

@@ -51,9 +51,9 @@ Built to work for **any Victorian high school subject**; Year 8 Mathematics is t
 - ☐ Step 3: daily review screen — auto-mark MCQ/numeric, self-rate written answers, interleaved across topics (A)
 
 ### M5: Dashboards (A)
-- ☐ Student: topics with their stage, today's review count, streak
-- ☐ Mentor: grid of students × topics (stage), notes waiting for override, question drafts, safety flags
-- ☐ Parent: per-child summary (topic stages, time spent, reviews due)
+- ◐ Student: topics with their stage (done); today's review count, streak (with the review deck)
+- ☑ Mentor: students × topics (stage) on `/mentor/students`, notes on `/mentor/notes`, safety flags on `/mentor`, question drafts on `/mentor/questions`
+- ◐ Parent: per-child topic stages (done); time spent, reviews due (with the review deck)
 
 ### M6: Guardrails before real use (both)
 - ☑ `src/lib/ai/client.ts` wrapper: safety system prompt, budget check, usage logging, per-student daily cap
