@@ -85,10 +85,28 @@ export default async function StudentTopicPage(props: PageProps<"/student/topics
         </section>
       )}
 
-      {stage !== "locked" && (
+      {stage === "notes_in" && (
         <section className="mt-6 rounded-xl border border-green-200 bg-green-50 p-4 text-sm">
           <p className="font-medium">Your notes are in.</p>
-          <p className="mt-1">Next: the checkpoint quiz for this topic (coming soon).</p>
+          <p className="mt-1">Step 2: the checkpoint quiz. Get every question right to pass.</p>
+          <Link
+            href={`/student/topics/${topic.id}/checkpoint`}
+            className="mt-3 inline-block rounded-lg bg-zinc-900 px-4 py-2.5 font-medium text-white"
+          >
+            Go to the checkpoint
+          </Link>
+        </section>
+      )}
+
+      {stage !== "locked" && stage !== "notes_in" && (
+        <section className="mt-6 rounded-xl border border-green-200 bg-green-50 p-4 text-sm">
+          <p className="font-medium">Checkpoint passed.</p>
+          <p className="mt-1">
+            This topic&apos;s questions go into your daily practice (coming soon).{" "}
+            <Link href={`/student/topics/${topic.id}/checkpoint`} className="underline">
+              See your checkpoint
+            </Link>
+          </p>
         </section>
       )}
 

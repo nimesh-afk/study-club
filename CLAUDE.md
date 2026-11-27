@@ -122,11 +122,12 @@ Built:
 - `topic_progress` — student_id, objective_id, stage (`locked` | `notes_in` | `checkpoint_passed` | `practising` | `secure` | `explained`), notes_accepted_at, checkpoint_passed_at, secure_at. Read: the student, linked mentors/parents, admins. **Written only by server code** (admin client) so stages can be trusted.
 - `notes_submissions` — student_id, objective_id, photo_paths (private `notes` bucket, `<student_id>/<uuid>.jpg`), status (`checking` | `accepted` | `needs_more` | `failed`), ai_result (jsonb: per key point yes/partly/no, feedback, readable, is_study_notes), decided_by (`ai` | `mentor`), decided_by_user, decided_at, photos_deleted_at. Read: the student, linked mentors, admins (not parents). Written only by server code. Screens: `/student/topics/[id]`, `/mentor/notes`.
 
+- `checkpoint_attempts` — student_id, objective_id, question_ids (uuid[], order shown), status (`open` | `marked`), results (jsonb per question: response, correct, feedback, correct_answer), score, total, passed, created_at, marked_at. Read: the student, linked mentors, admins. Written only by server code. Screen: `/student/topics/[id]/checkpoint`.
+- `safety_flags` — student_id, source (`checkpoint` | `notes` | `review`), source_id, reason, created_at, reviewed_by, reviewed_at. Read and mark reviewed: linked mentors and admins (shown on `/mentor`). Written by server code when the AI's `concern` flag is set.
+
 Planned:
-- `checkpoint_attempts` — student_id, objective_id, question_ids, answers, score, passed, created_at
 - `cards` — student_id, question_id, FSRS fields (due, stability, difficulty, elapsed_days, scheduled_days, reps, lapses, state, last_review)
 - `review_logs` — student_id, card id, rating, review time, previous schedule (kept so FSRS can be tuned later)
-- `safety_flags` — student_id, reason, created_at, reviewed_by, reviewed_at
 
 ---
 
@@ -263,7 +264,9 @@ npm test           # once tests are set up
 - Student flow: **notes photos unlock a topic → checkpoint quiz (100%, fresh random draw each attempt, no wait between attempts) → daily spaced-repetition review → Feynman voice explanation (later)**. This replaces the old diagnose → teach → explain-back loop and the 0–4 mastery score with decay.
 - **Spaced repetition: FSRS via `ts-fsrs`** (MIT), scheduling individual questions, mixed across topics, with a daily cap. Dependency approved by Nimesh; add it in the PR that builds the review step.
 - Question bank is built from uploaded tests and past exams: AI extracts and tags questions, mentors approve in bulk.
-- Daily review written answers are self-rated (no AI); checkpoint short answers are AI-marked against the model answer.
+- Daily review written answers are self-rated (no AI); checkpoint short answers are AI-marked (cheap model, one call per attempt) against the model answer.
+- Checkpoint uses only `mcq`, `numeric` and `short` questions without figures (extended answers are too harsh for a 100% gate; they go to daily review). Needs at least 5 eligible questions; draws up to 8, avoiding the last attempt's. Numeric answers accept units and "2.5 x 10^-3" style. Answers are shown after marking. Rules: `src/lib/checkpoint/rules.ts`.
+- Passing a checkpoint sets the stage to `checkpoint_passed`; the review-deck PR (FSRS) will move it to `practising` and create cards from checkpoint attempts (including wrong answers).
 - Notes photos: AI decides, mentor can override; photos deleted 30 days after the decision. Pass rule: at least 80% of key points covered ("partly" counts half), readable, and actually study notes (`src/lib/notes/decide.ts`). Photos are shrunk to 1,600 px JPEG in the browser before upload. Old photos are deleted whenever notes are submitted or decided (no scheduled job).
 - Students see every subject that has approved topics (no per-student subject enrolment yet).
 - Trusted results (topic stages, notes decisions) are written by server code with the admin client after checking the caller; the API gives users read-only access to them.
