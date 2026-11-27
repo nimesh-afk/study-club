@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Study Club
 
-## Getting Started
+An adaptive learning app for a small, private family study club preparing for VCE.
 
-First, run the development server:
+Mentors upload the curriculum and textbook, AI proposes learning objectives and content, and mentors approve everything before a student sees it. Students work through a loop of diagnose → teach → explain back → practise, and a mastery score (0–4) per objective decides what comes next. Students, mentors and parents each get their own dashboard.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+**First subject:** Year 8 Mathematics (Victorian Curriculum 2.0, Level 8). VCE Chemistry, Biology and English come later.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Access is invite-only.** There is no public sign-up, and no student data, secrets or copyrighted source documents are ever stored in this repo.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- [Next.js](https://nextjs.org) (App Router, TypeScript, Tailwind) on Vercel, Sydney region
+- [Supabase](https://supabase.com) for Postgres, auth (email one-time codes) and private file storage, Sydney region
+- [Claude API](https://docs.claude.com) for AI features, called from server code only
 
-## Learn More
+## Where to read more
 
-To learn more about Next.js, take a look at the following resources:
+- **[CLAUDE.md](CLAUDE.md)**: what the app is, how it's built, and the rules we follow (privacy, child safety, AI use, workflow). Start here.
+- **[docs/ROADMAP.md](docs/ROADMAP.md)**: what's done and what's next.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Running it locally
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Copy `.env.example` to `.env.local` and fill in the values (ask Nimesh; never commit this file).
+2. Install and start:
 
-## Deploy on Vercel
+   ```bash
+   npm install
+   npm run dev
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+3. Open <http://localhost:3000>.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Before opening a pull request, run `npm run lint` and `npm run build`. Every change goes through a branch and pull request; see CLAUDE.md section 7.
