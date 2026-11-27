@@ -8,7 +8,7 @@ export default async function MentorHome() {
     <SignedInShell profile={profile}>
       <h1 className="text-2xl font-semibold">Mentor area</h1>
       <p className="mt-2 text-zinc-600">
-        Source documents, topics and student progress.
+        Source documents, topics, the question bank and student progress.
       </p>
       <div className="mt-6 flex flex-wrap gap-3">
         <Link
@@ -22,6 +22,12 @@ export default async function MentorHome() {
           className="inline-block rounded-lg border border-zinc-300 px-4 py-2 font-medium"
         >
           Topics →
+        </Link>
+        <Link
+          href="/mentor/questions"
+          className="inline-block rounded-lg border border-zinc-300 px-4 py-2 font-medium"
+        >
+          Question bank →
         </Link>
       </div>
       {profile.role === "admin" && (

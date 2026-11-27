@@ -117,8 +117,9 @@ Built:
 - `objective_prereqs` — no longer used for ordering (topics use sort_order); kept until a later clean-up.
 - `ai_usage` — user_id, purpose, model, input_tokens, output_tokens, cost_cents, created_at
 
+- `questions` — subject_id, objective_id (topic; null until a mentor picks one if the AI couldn't), source_document_id, source_ref (e.g. "Section B Q5c"), source_seq, kind (`mcq` | `numeric` | `short` | `extended`), context (shared stem of a multi-part question), stem, options (jsonb, MCQ only), answer (jsonb: `correct_option` / `value`+`unit`+`tolerance_pct` / `model_answer`+`marking_points`; `ai_suggested: true` when the AI worked it out without a marking guide, cleared when a mentor saves), marks, needs_figure, figure_page, figure_path, study_design_version, is_current, status (`draft` | `approved` | `retired`). **Mentors only**; students get questions through server code (M4). Approving needs a topic. Screens: `/mentor/questions`.
+
 Planned:
-- `questions` — subject_id, objective_id (topic), source_document_id, source_ref (e.g. "2024 exam Section B Q5c"), kind (`mcq` | `numeric` | `short` | `extended`), body (jsonb: stem, options, figure path), answer (jsonb: correct option/value/tolerance or model answer + marking points), marks, study_design_version, is_current, status (`draft` | `approved` | `retired`). Students see approved questions only through server code, one at a time.
 - `notes_submissions` — student_id, objective_id, photo paths (private `notes` bucket), ai_result (jsonb: covered/missing key points), status (`checking` | `accepted` | `needs_more`), decided_by (`ai` | mentor id), created_at
 - `checkpoint_attempts` — student_id, objective_id, question_ids, answers, score, passed, created_at
 - `cards` — student_id, question_id, FSRS fields (due, stability, difficulty, elapsed_days, scheduled_days, reps, lapses, state, last_review)

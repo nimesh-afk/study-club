@@ -9,7 +9,7 @@ import { splitIntoChunks } from "@/lib/extraction/split";
 
 export type RecordState = { message: string; isError: boolean };
 
-const TYPES = ["syllabus", "textbook", "notes"] as const;
+const TYPES = ["syllabus", "textbook", "past_exam", "examiner_report", "notes"] as const;
 type SourceType = (typeof TYPES)[number];
 // Must match the path the upload form creates: <SUBJECT CODE>/<random id>.pdf
 const PATH_PATTERN =
