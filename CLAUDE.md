@@ -292,9 +292,12 @@ Preview links look like `https://study-club-git-<branch>-mithuru.vercel.app` (Ve
 **Email:** Resend, domain `mail.piyatissa.com` (verified, Tokyo region, tracking off). The root domain piyatissa.com uses Google Workspace: never touch its DNS records.
 **Admin:** Nimesh (`nimesh@piyatissa.com`), role `admin`.
 
-**Done:** M0, M1, the M2 AI wrapper, the M2 curriculum/objectives tables, PDF upload and text extraction (`/mentor/sources`), AI objective proposal and mentor review (`/mentor/objectives`, `/mentor/objectives/[id]`) (`src/lib/ai/`, admin page `/mentor/ai-check`). Migrations applied: `20261112100000_profiles_and_links`, `20261112230000_ai_usage`, `20261113090000_curriculum_and_objectives`, `20261113100000_sources_bucket`.
-**Next:** see `docs/ROADMAP.md`. First: make subjects and topics generic (M2b), set up `CHEM34`, upload the VCE Chemistry study design (VCAA .docx exported to PDF), propose and approve 10–20 topics. Then the question bank (M3).
-Year 8 Maths so far: textbook uploaded and extracted (Essential Mathematics for the Victorian Curriculum 8, 3rd ed., 955 pages → 213 chunks); no curriculum or objectives yet.
+**Done (merged):** M0, M1, M2 (AI wrapper, curriculum/objectives tables, PDF upload + extraction, objective proposal + review). Migrations applied: `20261112100000_profiles_and_links`, `20261112230000_ai_usage`, `20261113090000_curriculum_and_objectives`, `20261113100000_sources_bucket`.
+**Built 27 Nov 2026, waiting to merge (stacked PRs, merge in order):** #16 M2b any subject + topics → #17 M3 question bank → #18 M4 notes → #19 M4 checkpoint + safety flags → #20 M5 dashboards. Each of #16–#19 has a migration to apply to the live database **before** merging (`20261127090000_any_subject_topics`, `20261127100000_questions`, `20261127110000_notes_and_progress`, `20261127120000_checkpoint_and_safety`).
+**Next:** apply migrations + merge; upload the VCE Chemistry 3&4 study design, propose/approve topics; upload 2024/2025 exams + examiner reports, extract/approve questions; test notes and checkpoint with a test student. Then M4 step 3: daily FSRS review (needs `npm install ts-fsrs` on the Mac: Claude's environments can't reach the npm registry), figures for questions, privacy page.
+Year 8 Maths so far: textbook uploaded and extracted (Essential Mathematics for the Victorian Curriculum 8, 3rd ed., 955 pages → 213 chunks); no curriculum or topics yet.
+
+**Checks Claude runs:** migrations on a local Postgres 16 with stub `auth`/`storage` schemas plus per-role RLS scripts; `tsc --noEmit` and `eslint src` in the Mac VM (`~/Documents/study-club`, mounted), using a git-ignored `.claudecheck/` tsconfig with generated route types because `next typegen`/`next build` can't run there (no network for the SWC binary).
 
 **How work gets done right now**
 - Nimesh is new to GitHub. Explain steps plainly; one step at a time.
