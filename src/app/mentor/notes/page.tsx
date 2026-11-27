@@ -55,7 +55,8 @@ export default async function MentorNotesPage() {
   const { data: signed } = paths.length
     ? await supabase.storage.from("notes").createSignedUrls(paths, 600)
     : { data: [] };
-  const urlOf = new Map((signed ?? []).map((s) => [s.path, s.signedUrl]));
+  const urlOf = new Map<string, string>();
+  for (const s of signed ?? []) if (s.path && s.signedUrl) urlOf.set(s.path, s.signedUrl);
 
   return (
     <SignedInShell profile={profile}>
@@ -100,14 +101,16 @@ export default async function MentorNotesPage() {
               <p className="mt-2 text-sm text-zinc-500">Photos deleted.</p>
             ) : (
               <div className="mt-3 flex flex-wrap gap-2">
-                {s.photo_paths.map((p, i) =>
-                  urlOf.get(p) ? (
-                    <a key={p} href={urlOf.get(p)} target="_blank" rel="noreferrer" className="block">
+                {s.photo_paths.map((p, i) => {
+                  const url = urlOf.get(p);
+                  if (!url) return null;
+                  return (
+                    <a key={p} href={url} target="_blank" rel="noreferrer" className="block">
                       {/* eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL */}
-                      <img src={urlOf.get(p)} alt={`Notes photo ${i + 1}`} className="h-28 w-auto rounded border border-zinc-200" />
+                      <img src={url} alt={`Notes photo ${i + 1}`} className="h-28 w-auto rounded border border-zinc-200" />
                     </a>
-                  ) : null,
-                )}
+                  );
+                })}
               </div>
             )}
 
