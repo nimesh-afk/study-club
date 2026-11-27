@@ -44,8 +44,8 @@ Built to work for **any Victorian high school subject**; Year 8 Mathematics is t
 ### M4: Student flow (A + B)
 - ☑ Migration: `notes_submissions`, private `notes` bucket (30-day deletion), `topic_progress` + RLS
 - ☑ Step 1: notes photo upload (phone camera) → AI checks coverage of key points → accepted / needs more; mentor override (B)
-- ☐ Migration: `checkpoint_attempts` + RLS
-- ☐ Step 2: checkpoint quiz — 5–8 random approved questions, 100% to pass, fresh draw each attempt, no wait; wrong answers go into the deck (A + B)
+- ☑ Migration: `checkpoint_attempts` + RLS
+- ☑ Step 2: checkpoint quiz — 5–8 random approved questions, 100% to pass, fresh draw each attempt, no wait; wrong answers go into the deck (A + B)
 - ☐ Migration: `cards`, `review_logs` + RLS; add `ts-fsrs`
 - ☐ `src/lib/srs/`: FSRS wrapper, daily queue (due first, then new, capped), topic stages incl. "Secure", config — pure functions **with unit tests** (A)
 - ☐ Step 3: daily review screen — auto-mark MCQ/numeric, self-rate written answers, interleaved across topics (A)
@@ -57,7 +57,7 @@ Built to work for **any Victorian high school subject**; Year 8 Mathematics is t
 
 ### M6: Guardrails before real use (both)
 - ☑ `src/lib/ai/client.ts` wrapper: safety system prompt, budget check, usage logging, per-student daily cap
-- ☐ Migration: `safety_flags` + RLS
+- ☑ Migration: `safety_flags` + RLS
 - ☐ AI disclosure on student screens; privacy page (incl. notes photos and their deletion)
 - ☐ Anthropic Console spend limit; Supabase backups checked; decide on Supabase Pro (free projects pause after a week idle)
 - ☐ Test pass with three real accounts (student, parent, mentor) on phone, iPad and laptop
