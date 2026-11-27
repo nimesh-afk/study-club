@@ -109,11 +109,11 @@ docs/
 Built:
 - `profiles` — id (= auth user id), role (`student` | `mentor` | `parent` | `admin`), display_name, year_level, guardian_consent_at
 - `student_links` — student_id, linked_user_id, relationship (`mentor` | `parent`)
-- `subjects` — code (e.g. `CHEM34`, `MATH8`), name, current_study_design_version
+- `subjects` — code (e.g. `CHEM34`, `MATH8`), name, current_study_design_version, level_label (e.g. "Units 3 and 4"), grouping_label ("Area of study" / "Strand"), scope_note (which part of the curriculum document to use, told to the AI), curriculum_code_prefix (optional, e.g. `VC2M8`). Added by SQL for now (no admin screen yet).
 - `source_documents` — subject_id, type (`syllabus` | `textbook` | `examiner_report` | `past_exam` | `notes`), title, year, study_design_version, storage_path, status (`uploaded` | `extracted` | `failed`), uploaded_by. **Mentors only.**
 - `chunks` — document_id, seq, heading, page_start/page_end, text, source_rank, study_design_version, is_current. **Mentors only.**
 - `chunk_objectives` — chunk_id, objective_id
-- `objectives` — **one row per topic**: subject_id, unit, area_of_study, code, statement, dot_point_text, sort_order, status (`draft` | `approved` | `retired`), approved_by, approved_at. Students/parents see approved only; approved topics are retired, never deleted. *(Needs a `key_points` column and a `locked` flag.)*
+- `objectives` — **one row per topic**: subject_id, unit, area_of_study (the group: area of study or strand), code (`T01`, `T02`, …), title, statement, key_points (text[], curriculum dot points word for word), locked (keep in order), dot_point_text (old, unused), sort_order, status (`draft` | `approved` | `retired`), approved_by, approved_at. Students/parents see approved only; approved topics are retired, never deleted. The mentor screens are at `/mentor/objectives` (labelled "Topics").
 - `objective_prereqs` — no longer used for ordering (topics use sort_order); kept until a later clean-up.
 - `ai_usage` — user_id, purpose, model, input_tokens, output_tokens, cost_cents, created_at
 

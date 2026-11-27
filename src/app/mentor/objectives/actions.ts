@@ -6,33 +6,30 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { askClaudeJson, AiAnswerError } from "@/lib/ai/client";
 import { AI_PAUSED_MESSAGE, AiPausedError } from "@/lib/ai/budget";
-import { curriculumCodes } from "@/lib/extraction/split";
-import { createsLoop } from "@/lib/objectives/prereqs";
 import {
-  PROPOSED_MAP_SCHEMA,
-  PROPOSE_OBJECTIVES_INSTRUCTIONS,
-  STRANDS,
-  buildProposePrompt,
-  cleanPrerequisites,
-  type ProposedMap,
-} from "@/lib/ai/prompts/propose-objectives";
+  PROPOSED_TOPICS_SCHEMA,
+  PROPOSE_TOPICS_INSTRUCTIONS,
+  TOPIC_TARGET,
+  buildProposeTopicsPrompt,
+  cleanTopic,
+  nextTopicCodes,
+  type ProposedTopics,
+} from "@/lib/ai/prompts/propose-topics";
 
 export type ProposeState = { message: string; isError: boolean };
 
-// Curriculum code prefix per subject, used to pick the right part of a big
-// curriculum document (e.g. the F–10 file has every level).
-const CODE_PREFIX: Record<string, string> = { MATH8: "VC2M8" };
-const MAX_CURRICULUM_CHARS = 60_000; // ~15,000 tokens
-const OBJECTIVE_CODE = /^[A-Z0-9]{4,20}(\.\d{1,2})?$/;
+// A full VCE study design (Units 1–4) is about 100,000–150,000 characters.
+// 200,000 characters is roughly 50,000 tokens: about 10 US cents of input.
+const MAX_CURRICULUM_CHARS = 200_000;
 
 function fail(message: string): ProposeState {
   return { message, isError: true };
 }
 
-// Asks Claude (main model) to propose draft objectives and prerequisites from
-// the curriculum. Replaces earlier DRAFT objectives only: approved and retired
-// objectives are never touched. Mentors only. Uses the mentor's own session.
-export async function proposeObjectives(
+// Asks Claude (main model) to propose 10–20 draft topics with key points from
+// the curriculum. Replaces earlier DRAFT topics only: approved and retired
+// topics are never touched. Mentors only. Uses the mentor's own session.
+export async function proposeTopics(
   _previous: ProposeState,
   formData: FormData,
 ): Promise<ProposeState> {
@@ -41,7 +38,7 @@ export async function proposeObjectives(
 
   const { data: subject } = await supabase
     .from("subjects")
-    .select("id, code, current_study_design_version")
+    .select("id, code, name, level_label, grouping_label, scope_note, curriculum_code_prefix")
     .eq("id", String(formData.get("subject_id") ?? ""))
     .maybeSingle();
   if (!subject) return fail("Subject not found.");
@@ -61,24 +58,21 @@ export async function proposeObjectives(
   const { data: syllabus, error: syllabusError } = await chunksOf("syllabus", "text");
   if (syllabusError) return fail("Couldn't read the curriculum.");
   if (!syllabus || syllabus.length === 0)
-    return fail("Upload the curriculum PDF (type: Curriculum) and extract its text first.");
+    return fail("Upload the curriculum or study design PDF (type: Curriculum) and extract its text first.");
 
   let curriculumParts = (syllabus as unknown as { text: string }[]).map((r) => r.text);
-  if (curriculumParts.join("\n").length > MAX_CURRICULUM_CHARS) {
-    const prefix = CODE_PREFIX[subject.code];
-    curriculumParts = prefix ? curriculumParts.filter((t) => t.includes(prefix)) : [];
+  // A big multi-level curriculum file: keep only the parts with this level's codes.
+  if (curriculumParts.join("\n").length > MAX_CURRICULUM_CHARS && subject.curriculum_code_prefix) {
+    const prefix = subject.curriculum_code_prefix;
+    curriculumParts = curriculumParts.filter((t) => t.includes(prefix));
   }
   const curriculumText = curriculumParts.join("\n\n");
-  if (!curriculumText || curriculumText.length > MAX_CURRICULUM_CHARS)
-    return fail("The curriculum text is too long. Upload just the Level 8 part.");
+  if (!curriculumText) return fail("No curriculum text found for this subject.");
+  if (curriculumText.length > MAX_CURRICULUM_CHARS)
+    return fail("The curriculum text is too long. Upload just the part for this subject and level.");
 
-  // 2. Textbook section headings, and the curriculum codes on chapter openers.
-  // Headings and codes only: no textbook passages go to the AI here.
+  // 2. Textbook section headings, if there is a textbook (headings only).
   const { data: textbookHeadings } = await chunksOf("textbook", "heading");
-  const { data: openers } = await chunksOf("textbook", "heading, text").like(
-    "heading",
-    "Chapter % opener%",
-  );
   const sectionHeadings = [
     ...new Set(
       ((textbookHeadings ?? []) as unknown as { heading: string | null }[])
@@ -87,23 +81,27 @@ export async function proposeObjectives(
         .map((h) => h.replace(/ \(part \d+\)$/, "")),
     ),
   ];
-  const chapterCodes = ((openers ?? []) as unknown as { heading: string; text: string }[])
-    .map((r) => ({ chapter: r.heading.replace(/ opener.*$/, ""), codes: curriculumCodes(r.text) }))
-    .filter((c) => c.codes.length > 0);
 
   // 3. Ask Claude.
-  let map: ProposedMap;
+  let proposal: ProposedTopics;
   try {
-    map = await askClaudeJson<ProposedMap>(
+    proposal = await askClaudeJson<ProposedTopics>(
       {
-        purpose: "propose_objectives",
+        purpose: "propose_topics",
         tier: "main",
         user: { id: profile.id, role: profile.role },
-        instructions: PROPOSE_OBJECTIVES_INSTRUCTIONS,
-        prompt: buildProposePrompt({ curriculumText, sectionHeadings, chapterCodes }),
+        instructions: PROPOSE_TOPICS_INSTRUCTIONS,
+        prompt: buildProposeTopicsPrompt({
+          subjectName: subject.name,
+          levelLabel: subject.level_label,
+          groupingLabel: subject.grouping_label,
+          scopeNote: subject.scope_note,
+          curriculumText,
+          sectionHeadings,
+        }),
         maxTokens: 16_000,
       },
-      PROPOSED_MAP_SCHEMA,
+      PROPOSED_TOPICS_SCHEMA,
     );
   } catch (error) {
     if (error instanceof AiPausedError) return fail(AI_PAUSED_MESSAGE);
@@ -112,20 +110,13 @@ export async function proposeObjectives(
   }
 
   // 4. Check what came back.
-  const seen = new Set<string>();
-  const objectives = map.objectives.filter((o) => {
-    const ok =
-      OBJECTIVE_CODE.test(o.code) &&
-      !seen.has(o.code) &&
-      (STRANDS as readonly string[]).includes(o.strand) &&
-      o.statement.trim().length > 0 &&
-      o.statement.length <= 500;
-    seen.add(o.code);
-    return ok;
-  });
-  if (objectives.length === 0) return fail("The AI didn't return any usable objectives.");
+  const topics = proposal.topics
+    .map(cleanTopic)
+    .filter((t) => t !== null)
+    .slice(0, 30);
+  if (topics.length === 0) return fail("The AI didn't return any usable topics.");
 
-  // 5. Replace old drafts; keep codes already used by approved/retired objectives.
+  // 5. Replace old drafts; approved/retired topics keep their codes.
   const { error: deleteError } = await supabase
     .from("objectives")
     .delete()
@@ -135,53 +126,38 @@ export async function proposeObjectives(
 
   const { data: kept } = await supabase
     .from("objectives")
-    .select("id, code")
+    .select("code, sort_order")
     .eq("subject_id", subject.id);
-  const idByCode = new Map((kept ?? []).map((o) => [o.code, o.id]));
+  const codes = nextTopicCodes((kept ?? []).map((o) => o.code), topics.length);
+  const start = Math.max(0, ...(kept ?? []).map((o) => o.sort_order));
 
-  const strandOrder = (s: string) => STRANDS.indexOf(s as (typeof STRANDS)[number]);
-  const newRows = objectives
-    .filter((o) => !idByCode.has(o.code))
-    .sort((a, b) => strandOrder(a.strand) - strandOrder(b.strand) || a.code.localeCompare(b.code))
-    .map((o, i) => ({
-      subject_id: subject.id,
-      area_of_study: o.strand,
-      code: o.code,
-      statement: o.statement.trim(),
-      dot_point_text: o.curriculum_text.trim() || null,
-      sort_order: (i + 1) * 10,
-      status: "draft" as const,
-    }));
-
-  const { data: inserted, error: insertError } = await supabase
-    .from("objectives")
-    .insert(newRows)
-    .select("id, code");
-  if (insertError) return fail("Couldn't save the proposed objectives.");
-  for (const o of inserted ?? []) idByCode.set(o.code, o.id);
-
-  // 6. Prerequisites between the new drafts and anything already there.
-  const prereqRows = cleanPrerequisites({ objectives, prerequisites: map.prerequisites })
-    .filter((p) => idByCode.has(p.objective_code) && idByCode.has(p.prereq_code))
-    .filter((p) => (inserted ?? []).some((o) => o.code === p.objective_code))
-    .map((p) => ({
-      objective_id: idByCode.get(p.objective_code)!,
-      prereq_id: idByCode.get(p.prereq_code)!,
-    }));
-  if (prereqRows.length > 0) {
-    const { error } = await supabase.from("objective_prereqs").insert(prereqRows);
-    if (error) return fail("Objectives saved, but the prerequisites couldn't be saved.");
-  }
+  const rows = topics.map((t, i) => ({
+    subject_id: subject.id,
+    unit: t.unit || null,
+    area_of_study: t.group,
+    code: codes[i],
+    title: t.title,
+    statement: t.statement,
+    key_points: t.key_points,
+    sort_order: start + (i + 1) * 10,
+    status: "draft" as const,
+  }));
+  const { error: insertError } = await supabase.from("objectives").insert(rows);
+  if (insertError) return fail("Couldn't save the proposed topics.");
 
   revalidatePath("/mentor/objectives");
+  const outside =
+    rows.length < TOPIC_TARGET.min || rows.length > TOPIC_TARGET.max
+      ? ` That's outside the usual ${TOPIC_TARGET.min}–${TOPIC_TARGET.max}: you may want to propose again.`
+      : "";
   return {
-    message: `Proposed ${newRows.length} draft objectives with ${prereqRows.length} prerequisite links. Review them below.`,
+    message: `Proposed ${rows.length} draft topics. Review them below.${outside}`,
     isError: false,
   };
 }
 
 // ---------------------------------------------------------------------------
-// Mentor review (CLAUDE.md 5.4). Objectives are set up once a year, so this is
+// Mentor review (CLAUDE.md 5.4). Topics are set up once a year, so this is
 // deliberately simple: edit, delete drafts, approve, retire. Mentor's own
 // session: RLS decides what each mentor can change.
 // ---------------------------------------------------------------------------
@@ -190,8 +166,8 @@ export type ReviewState = { message: string; isError: boolean };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Save wording, strand and prerequisites of one objective.
-export async function saveObjective(
+// Save one topic: title, statement, unit, group, key points (one per line), locked.
+export async function saveTopic(
   _previous: ReviewState,
   formData: FormData,
 ): Promise<ReviewState> {
@@ -199,68 +175,54 @@ export async function saveObjective(
   const supabase = await createClient();
 
   const id = String(formData.get("id") ?? "");
+  const title = String(formData.get("title") ?? "").trim();
   const statement = String(formData.get("statement") ?? "").trim();
-  const strand = String(formData.get("strand") ?? "");
-  const prereqIds = [...new Set(formData.getAll("prereq_ids").map(String))].filter(
-    (p) => UUID.test(p) && p !== id,
-  );
+  const unit = String(formData.get("unit") ?? "").trim();
+  const group = String(formData.get("group") ?? "").trim();
+  const locked = formData.get("locked") === "on";
+  const keyPoints = [
+    ...new Set(
+      String(formData.get("key_points") ?? "")
+        .split("\n")
+        .map((k) => k.trim())
+        .filter(Boolean),
+    ),
+  ];
 
-  if (!UUID.test(id)) return { message: "Objective not found.", isError: true };
+  if (!UUID.test(id)) return { message: "Topic not found.", isError: true };
+  if (title.length < 1 || title.length > 80)
+    return { message: "The title must be 1 to 80 characters.", isError: true };
   if (statement.length < 1 || statement.length > 500)
     return { message: "The statement must be 1 to 500 characters.", isError: true };
-  if (!(STRANDS as readonly string[]).includes(strand))
-    return { message: "Please choose a strand.", isError: true };
+  if (unit.length > 40) return { message: "The unit is too long.", isError: true };
+  if (group.length < 1 || group.length > 200)
+    return { message: "Please fill in the group (area of study or strand).", isError: true };
+  if (keyPoints.length < 1 || keyPoints.length > 30)
+    return { message: "Add 1 to 30 key points, one per line.", isError: true };
+  if (keyPoints.some((k) => k.length > 1000))
+    return { message: "Each key point must be under 1,000 characters.", isError: true };
 
-  const { data: objective } = await supabase
+  const { data, error } = await supabase
     .from("objectives")
-    .select("id, subject_id")
+    .update({
+      title,
+      statement,
+      unit: unit || null,
+      area_of_study: group,
+      key_points: keyPoints,
+      locked,
+    })
     .eq("id", id)
-    .maybeSingle();
-  if (!objective) return { message: "Objective not found.", isError: true };
-
-  // Prerequisites must be objectives of the same subject, with no loops.
-  const { data: siblings } = await supabase
-    .from("objectives")
-    .select("id")
-    .eq("subject_id", objective.subject_id);
-  const siblingIds = new Set((siblings ?? []).map((s) => s.id));
-  if (prereqIds.some((p) => !siblingIds.has(p)))
-    return { message: "A chosen prerequisite isn't in this subject.", isError: true };
-
-  const { data: edges } = await supabase
-    .from("objective_prereqs")
-    .select("objective_id, prereq_id")
-    .in("objective_id", [...siblingIds]);
-  if (createsLoop(edges ?? [], id, prereqIds))
-    return {
-      message: "That would create a loop (one of those already needs this objective first).",
-      isError: true,
-    };
-
-  const { error: updateError } = await supabase
-    .from("objectives")
-    .update({ statement, area_of_study: strand })
-    .eq("id", id);
-  if (updateError) return { message: "Couldn't save the changes.", isError: true };
-
-  const { error: clearError } = await supabase
-    .from("objective_prereqs")
-    .delete()
-    .eq("objective_id", id);
-  if (clearError) return { message: "Couldn't update the prerequisites.", isError: true };
-  if (prereqIds.length > 0) {
-    const { error } = await supabase
-      .from("objective_prereqs")
-      .insert(prereqIds.map((p) => ({ objective_id: id, prereq_id: p })));
-    if (error) return { message: "Couldn't save the prerequisites.", isError: true };
-  }
+    .select("id");
+  if (error || !data || data.length === 0)
+    return { message: "Couldn't save the changes.", isError: true };
 
   revalidatePath("/mentor/objectives");
   return { message: "Saved.", isError: false };
 }
 
-// Approve, retire or delete one objective. Deleting only works on drafts
-// (enforced by RLS too); approved objectives are retired instead.
+// Approve, retire or delete one topic. Deleting only works on drafts
+// (enforced by RLS too); approved topics are retired instead.
 export async function changeObjectiveStatus(formData: FormData): Promise<void> {
   const profile = await requireRole(["mentor", "admin"]);
   const supabase = await createClient();
@@ -277,14 +239,20 @@ export async function changeObjectiveStatus(formData: FormData): Promise<void> {
   } else if (action === "retire") {
     await supabase.from("objectives").update({ status: "retired" }).eq("id", id).eq("status", "approved");
   } else if (action === "delete") {
+    const { data: topic } = await supabase
+      .from("objectives")
+      .select("subjects(code)")
+      .eq("id", id)
+      .maybeSingle();
+    const code = (topic?.subjects as unknown as { code: string } | null)?.code;
     await supabase.from("objectives").delete().eq("id", id).eq("status", "draft");
     revalidatePath("/mentor/objectives");
-    redirect("/mentor/objectives");
+    redirect(code ? `/mentor/objectives?subject=${code}` : "/mentor/objectives");
   }
   revalidatePath("/mentor/objectives");
 }
 
-// Approve every draft of a subject at once, after a mentor has read them.
+// Approve every draft topic of a subject at once, after a mentor has read them.
 export async function approveAllDrafts(formData: FormData): Promise<void> {
   const profile = await requireRole(["mentor", "admin"]);
   const supabase = await createClient();

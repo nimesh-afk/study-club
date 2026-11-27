@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { proposeObjectives, type ProposeState } from "./actions";
+import { proposeTopics, type ProposeState } from "./actions";
 
 const initialState: ProposeState = { message: "", isError: false };
 
@@ -12,12 +12,12 @@ export function ProposeButton({
   subjectId: string;
   hasDrafts: boolean;
 }) {
-  const [state, formAction, pending] = useActionState(proposeObjectives, initialState);
+  const [state, formAction, pending] = useActionState(proposeTopics, initialState);
   return (
     <form
       action={formAction}
       onSubmit={(e) => {
-        if (hasDrafts && !confirm("This replaces all current DRAFT objectives. Approved ones stay. Continue?"))
+        if (hasDrafts && !confirm("This replaces all current DRAFT topics. Approved ones stay. Continue?"))
           e.preventDefault();
       }}
       className="flex flex-col gap-2"
@@ -32,11 +32,11 @@ export function ProposeButton({
           ? "Claude is reading the curriculum… (1–3 minutes)"
           : hasDrafts
             ? "Propose again with AI"
-            : "Propose objectives with AI"}
+            : "Propose topics with AI"}
       </button>
       <p className="text-sm text-zinc-600">
-        Uses the main AI model once: roughly 10–20 US cents. Everything it proposes starts as a
-        draft for a mentor to review.
+        Uses the main AI model once: roughly 10–30 US cents. It proposes 10–20 topics, each with
+        its key points from the curriculum. Everything starts as a draft for a mentor to review.
       </p>
       {state.message && (
         <p role="status" className={state.isError ? "text-red-700" : "text-green-700"}>
