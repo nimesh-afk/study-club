@@ -78,6 +78,8 @@ export function UploadForm({ subjects }: { subjects: SubjectOption[] }) {
           <select name="type" defaultValue="textbook" className={inputClass}>
             <option value="syllabus">Curriculum / study design</option>
             <option value="textbook">Textbook</option>
+            <option value="past_exam">Past exam or test (questions)</option>
+            <option value="examiner_report">Marking guide or examiner report (answers)</option>
             <option value="notes">Mentor notes</option>
           </select>
         </label>
@@ -87,7 +89,7 @@ export function UploadForm({ subjects }: { subjects: SubjectOption[] }) {
             name="title"
             required
             maxLength={200}
-            placeholder="e.g. Essential Mathematics 8 (3rd edition)"
+            placeholder="e.g. 2024 VCE Chemistry exam"
             className={inputClass}
           />
         </label>

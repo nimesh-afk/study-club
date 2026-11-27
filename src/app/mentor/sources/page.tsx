@@ -12,7 +12,7 @@ export const maxDuration = 300;
 const typeLabel: Record<string, string> = {
   syllabus: "Curriculum",
   textbook: "Textbook",
-  examiner_report: "Examiner report",
+  examiner_report: "Marking guide / examiner report",
   past_exam: "Past exam",
   notes: "Notes",
 };
@@ -43,8 +43,8 @@ export default async function SourcesPage() {
       </Link>
       <h1 className="mt-2 text-2xl font-semibold">Source documents</h1>
       <p className="mt-1 text-zinc-600">
-        Curriculum, textbook and notes. Stored privately for club members only; never share them
-        outside the club.
+        Curriculum, textbooks, past exams, marking guides and notes. Stored privately for club
+        members only; never share them outside the club.
       </p>
 
       <section className="mt-6 rounded-xl border border-zinc-200 p-4">

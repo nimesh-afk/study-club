@@ -29,17 +29,17 @@ Built to work for **any Victorian high school subject**; Year 8 Mathematics is t
 - ☑ AI proposes objectives + mentor review screen (`/mentor/objectives`)
 
 ### M2b: Any subject, 10–20 topics (B)
-- ☐ Migration: seed `CHEM34`; add `key_points` and `locked` to `objectives`; per-subject structure (e.g. "Area of Study" vs "Strand") stored on `subjects`
-- ☐ Remove Year-8-Maths-only code (subject picker on mentor pages; strands/code prefixes from the subject, not constants)
-- ☐ AI proposes **10–20 topics** with key points (replaces fine-grained objectives + prerequisites); review screen shows key points
+- ☑ Migration: seed `CHEM34`; add `key_points` and `locked` to `objectives`; per-subject structure (e.g. "Area of Study" vs "Strand") stored on `subjects`
+- ☑ Remove Year-8-Maths-only code (subject picker on mentor pages; strands/code prefixes from the subject, not constants)
+- ☑ AI proposes **10–20 topics** with key points (replaces fine-grained objectives + prerequisites); review screen shows key points
 - ☐ Run it for real: upload the VCE Chemistry study design PDF, propose, review, approve
 
 ### M3: Question bank (B)
-- ☐ Migration: `questions` + RLS
-- ☐ Upload tests/past exams with marking guides or examiner reports (type `past_exam` / `examiner_report`)
-- ☐ AI splits papers into questions, pairs answers, tags topic/kind/marks/source/version → drafts
-- ☐ Figures: flag questions that need a diagram; save the figure image to private storage
-- ☐ Mentor question review: approve all / one, edit, retire; filter by topic and source
+- ☑ Migration: `questions` + RLS
+- ☑ Upload tests/past exams with marking guides or examiner reports (type `past_exam` / `examiner_report`)
+- ☑ AI splits papers into questions, pairs answers, tags topic/kind/marks/source/version → drafts
+- ◐ Figures: questions that need a diagram are flagged with their page (done); saving the figure image to private storage (to do)
+- ☑ Mentor question review: approve all / one, edit, retire; filter by topic and source
 
 ### M4: Student flow (A + B)
 - ☐ Migration: `notes_submissions`, private `notes` bucket (30-day deletion), `topic_progress` + RLS
