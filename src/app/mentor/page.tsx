@@ -8,7 +8,7 @@ export default async function MentorHome() {
     <SignedInShell profile={profile}>
       <h1 className="text-2xl font-semibold">Mentor area</h1>
       <p className="mt-2 text-zinc-600">
-        Uploads, objective maps and student progress will appear here.
+        Source documents, topics and student progress.
       </p>
       <div className="mt-6 flex flex-wrap gap-3">
         <Link
@@ -21,7 +21,7 @@ export default async function MentorHome() {
           href="/mentor/objectives"
           className="inline-block rounded-lg border border-zinc-300 px-4 py-2 font-medium"
         >
-          Objectives →
+          Topics →
         </Link>
       </div>
       {profile.role === "admin" && (

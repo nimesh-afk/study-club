@@ -1,81 +1,90 @@
 "use client";
 
 import { useActionState } from "react";
-import { saveObjective, type ReviewState } from "../actions";
-
-export type PrereqOption = { id: string; code: string; statement: string; strand: string };
+import { saveTopic, type ReviewState } from "../actions";
 
 const initialState: ReviewState = { message: "", isError: false };
 const inputClass =
   "w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-base outline-none focus:border-zinc-900";
 
 export function EditForm({
-  objective,
-  strands,
-  options,
-  selected,
+  topic,
+  groupingLabel,
+  groups,
 }: {
-  objective: { id: string; statement: string; strand: string };
-  strands: readonly string[];
-  options: PrereqOption[];
-  selected: string[];
+  topic: {
+    id: string;
+    title: string;
+    statement: string;
+    unit: string;
+    group: string;
+    keyPoints: string[];
+    locked: boolean;
+  };
+  groupingLabel: string;
+  groups: string[];
 }) {
-  const [state, formAction, pending] = useActionState(saveObjective, initialState);
+  const [state, formAction, pending] = useActionState(saveTopic, initialState);
   return (
     <form action={formAction} className="flex flex-col gap-4">
-      <input type="hidden" name="id" value={objective.id} />
+      <input type="hidden" name="id" value={topic.id} />
       <label className="flex flex-col gap-1 text-sm font-medium">
-        Statement (what the student should be able to do)
+        Title (a few words)
+        <input name="title" required maxLength={80} defaultValue={topic.title} className={inputClass} />
+      </label>
+      <label className="flex flex-col gap-1 text-sm font-medium">
+        Statement (what the student will be able to do)
         <textarea
           name="statement"
           required
           maxLength={500}
           rows={3}
-          defaultValue={objective.statement}
+          defaultValue={topic.statement}
           className={inputClass}
         />
       </label>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          Unit (blank if none)
+          <input name="unit" maxLength={40} defaultValue={topic.unit} className={inputClass} />
+        </label>
+        <label className="flex flex-col gap-1 text-sm font-medium sm:col-span-2">
+          {groupingLabel}
+          <input
+            name="group"
+            required
+            maxLength={200}
+            list="topic-groups"
+            defaultValue={topic.group}
+            className={inputClass}
+          />
+          <datalist id="topic-groups">
+            {groups.map((g) => (
+              <option key={g} value={g} />
+            ))}
+          </datalist>
+        </label>
+      </div>
       <label className="flex flex-col gap-1 text-sm font-medium">
-        Strand
-        <select name="strand" defaultValue={objective.strand} className={inputClass}>
-          {strands.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+        Key points, one per line (the curriculum dot points this topic covers)
+        <textarea
+          name="key_points"
+          required
+          rows={Math.min(16, Math.max(5, topic.keyPoints.length + 2))}
+          defaultValue={topic.keyPoints.join("\n")}
+          className={inputClass}
+        />
+        <span className="font-normal text-zinc-600">
+          Used to check students&apos; notes and to sort questions into topics.
+        </span>
       </label>
-
-      <fieldset className="flex flex-col gap-1">
-        <legend className="mb-1 text-sm font-medium">
-          Needs first (prerequisites). Keep it to the 0–2 that really matter.
-        </legend>
-        <div className="max-h-80 overflow-y-auto rounded-lg border border-zinc-200 p-2">
-          {strands.map((strand) => {
-            const inStrand = options.filter((o) => o.strand === strand);
-            if (inStrand.length === 0) return null;
-            return (
-              <div key={strand} className="mb-2">
-                <p className="text-xs font-semibold uppercase text-zinc-500">{strand}</p>
-                {inStrand.map((o) => (
-                  <label key={o.id} className="flex items-start gap-2 py-1 text-sm">
-                    <input
-                      type="checkbox"
-                      name="prereq_ids"
-                      value={o.id}
-                      defaultChecked={selected.includes(o.id)}
-                      className="mt-1"
-                    />
-                    <span>
-                      <span className="font-mono text-zinc-600">{o.code}</span> {o.statement}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            );
-          })}
-        </div>
-      </fieldset>
+      <label className="flex items-start gap-2 text-sm">
+        <input type="checkbox" name="locked" defaultChecked={topic.locked} className="mt-1" />
+        <span>
+          <span className="font-medium">Keep in order:</span> students must pass the earlier
+          topics&apos; checkpoints before starting this one.
+        </span>
+      </label>
 
       <button
         type="submit"

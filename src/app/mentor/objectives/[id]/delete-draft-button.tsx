@@ -8,7 +8,7 @@ export function DeleteDraftButton({ id }: { id: string }) {
     <form
       action={changeObjectiveStatus}
       onSubmit={(e) => {
-        if (!confirm("Delete this draft objective? This can't be undone.")) e.preventDefault();
+        if (!confirm("Delete this draft topic? This can't be undone.")) e.preventDefault();
       }}
     >
       <input type="hidden" name="id" value={id} />
